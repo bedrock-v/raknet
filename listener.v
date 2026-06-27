@@ -89,7 +89,7 @@ pub fn (l &Listener) addr() string {
 }
 
 pub fn (l &Listener) accept() !&Conn {
-	conn := <-l.incoming or { return error('listener closed') }
+	conn := <-l.incoming or { return err_listener_closed }
 	return conn
 }
 
@@ -106,7 +106,7 @@ pub fn (l &Listener) accept_timeout(timeout time.Duration) !&Conn {
 		return error('accept timed out')
 	}
 	if !open || conn == unsafe { nil } {
-		return error('listener closed')
+		return err_listener_closed
 	}
 	return conn
 }
@@ -182,7 +182,7 @@ pub fn (mut l Listener) captured_packets() [][]u8 {
 
 fn (mut l Listener) loop() {
 	for !l.is_closed() {
-		mut buf := []u8{len: 1500}
+		mut buf := []u8{len: int(max_mtu_size)}
 		n, addr := l.udp.read(mut buf) or { continue }
 		if n == 0 {
 			continue

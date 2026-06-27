@@ -70,6 +70,10 @@ mut conn := dialer.dial(listener.addr())!
 - `listen`, `dial`, `ping`, `read`, `read_packet`, `write` and `close` are the main public API surface.
 - `write([]u8{})` returns an error; empty RakNet payloads are not sent.
 - Client-side connections own their UDP socket. Server-side connections share the listener socket.
+- `Conn` has app-level read/write deadlines, read/write timeouts, idle timeout and keepalive interval tuning.
+- `set_pong_data` sets static unconnected pong data. `set_pong_data_func` can generate it per remote address.
+- `block` and `block_for` can temporarily ignore packets from an address.
+- Public error constants expose stable `err.code()` values for common lifecycle, deadline and protocol failures.
 
 ## Tests
 

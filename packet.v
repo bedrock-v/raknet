@@ -148,6 +148,9 @@ fn split_packet_content(data []u8, mtu u16) [][]u8 {
 	if data.len > max_size {
 		max_size -= split_additional_size
 	}
+	if max_size <= 0 {
+		return [][]u8{}
+	}
 	mut fragments := [][]u8{}
 	mut offset := 0
 	for offset < data.len {

@@ -23,6 +23,10 @@ fn (mut win DatagramWindow) add_at(index Uint24, at time.Time) bool {
 	if win.seen(index) {
 		return false
 	}
+	dist := (u32(index) - u32(win.lowest)) & 0x00FFFFFF
+	if dist > u32(max_window_size) {
+		return false
+	}
 	if index >= win.highest {
 		win.highest = Uint24(u32(index) + 1)
 	}

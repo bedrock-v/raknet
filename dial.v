@@ -7,8 +7,9 @@ import message
 
 pub struct Dialer {
 pub mut:
-	max_mtu u16
-	timeout time.Duration
+	max_mtu              u16
+	timeout              time.Duration
+	max_transient_errors int
 }
 
 const mtu_probe_sizes = [u16(max_mtu_size), 1200, 576]
@@ -77,10 +78,28 @@ pub fn (dialer Dialer) dial(address string) !&Conn {
 		server_has_security: reply1.server_has_security
 		cookie:              reply1.cookie
 	}
-	udp.write(req2.encode())!
-	n2, _ := udp.read(mut buf)!
+	mut transient_errors := 0
+	mut n2 := 0
+	start2 := time.now()
+	for time.now() - start2 < timeout {
+		udp.write(req2.encode())!
+		n2, _ = udp.read(mut buf) or {
+			if is_transient_udp_read_error(err)
+				&& dialer.can_retry_transient_error(transient_errors) {
+				transient_errors++
+				continue
+			}
+			if err.code() == net.err_timed_out_code {
+				continue
+			}
+			return err
+		}
+		if n2 > 0 && buf[0] == message.id_open_connection_reply_2 {
+			break
+		}
+	}
 	if n2 == 0 || buf[0] != message.id_open_connection_reply_2 {
-		return error('expected open connection reply 2')
+		return err_connection_timed_out
 	}
 	reply2 := message.decode_open_connection_reply_2(buf[1..n2])!
 
@@ -101,6 +120,7 @@ pub fn (dialer Dialer) dial(address string) !&Conn {
 
 fn (dialer Dialer) discover_mtu(mut udp net.UdpConn, mut buf []u8, timeout time.Duration) !(message.OpenConnectionReply1, net.Addr) {
 	start := time.now()
+	mut transient_errors := 0
 	for mtu in dialer.mtu_probe_sizes() {
 		for _ in 0 .. 4 {
 			udp.write(message.OpenConnectionRequest1{
@@ -108,8 +128,13 @@ fn (dialer Dialer) discover_mtu(mut udp net.UdpConn, mut buf []u8, timeout time.
 				mtu:             mtu
 			}.encode())!
 			n, remote := udp.read(mut buf) or {
+				if is_transient_udp_read_error(err)
+					&& dialer.can_retry_transient_error(transient_errors) {
+					transient_errors++
+					continue
+				}
 				if time.now() - start >= timeout {
-					return error('open connection request 1 timed out')
+					return err_connection_timed_out
 				}
 				continue
 			}
@@ -123,13 +148,19 @@ fn (dialer Dialer) discover_mtu(mut udp net.UdpConn, mut buf []u8, timeout time.
 				}
 				message.id_incompatible_protocol_version {
 					response := message.decode_incompatible_protocol_version(buf[1..n])!
-					return error('mismatched protocol: client protocol = ${protocol_version}, server protocol = ${response.server_protocol}')
+					return error_with_code('mismatched protocol: client protocol = ${protocol_version}, server protocol = ${response.server_protocol}',
+						err_code_protocol_mismatch)
 				}
 				else {}
 			}
 		}
 	}
 	return error('expected open connection reply 1')
+}
+
+fn (dialer Dialer) can_retry_transient_error(count int) bool {
+	limit := if dialer.max_transient_errors == 0 { 10 } else { dialer.max_transient_errors }
+	return limit < 0 || count < limit
 }
 
 fn (dialer Dialer) mtu_probe_sizes() []u16 {
@@ -148,7 +179,7 @@ fn (dialer Dialer) mtu_probe_sizes() []u16 {
 
 fn client_loop(mut conn Conn) {
 	for !conn.is_closed() {
-		mut buf := []u8{len: 1500}
+		mut buf := []u8{len: int(max_mtu_size)}
 		n, _ := conn.udp.read(mut buf) or {
 			if conn.is_closed() {
 				break

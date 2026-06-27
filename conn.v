@@ -158,10 +158,10 @@ fn (mut c Conn) write_with_reliability(data []u8, reliability Reliability) !int 
 
 fn (mut c Conn) write_with_reliability_internal(data []u8, reliability Reliability, allow_closing bool) !int {
 	if !allow_closing && c.is_closing_or_closed() {
-		return error('connection closed')
+		return err_connection_closed
 	}
 	if c.write_deadline_expired(time.now()) {
-		return error('write deadline exceeded')
+		return err_write_deadline_exceeded
 	}
 	c.mutex.lock()
 	defer {
@@ -242,7 +242,7 @@ fn (mut c Conn) write_raw(data []u8) ! {
 
 pub fn (mut c Conn) read(mut buf []u8) !int {
 	if c.is_closed() {
-		return error('connection closed')
+		return err_connection_closed
 	}
 	mut data := []u8{}
 	wait, has_timeout := c.read_wait_timeout(time.now())
@@ -252,10 +252,10 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 				data = packet.clone()
 			}
 			_ := <-c.closed_chan {
-				return error('connection closed')
+				return err_connection_closed
 			}
 			wait {
-				return error('read deadline exceeded')
+				return err_read_deadline_exceeded
 			}
 		}
 	} else {
@@ -264,7 +264,7 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 				data = packet.clone()
 			}
 			_ := <-c.closed_chan {
-				return error('connection closed')
+				return err_connection_closed
 			}
 		}
 	}
@@ -277,7 +277,7 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 
 pub fn (mut c Conn) read_packet() ![]u8 {
 	if c.is_closed() {
-		return error('connection closed')
+		return err_connection_closed
 	}
 	wait, has_timeout := c.read_wait_timeout(time.now())
 	if has_timeout {
@@ -286,10 +286,10 @@ pub fn (mut c Conn) read_packet() ![]u8 {
 				return packet.clone()
 			}
 			_ := <-c.closed_chan {
-				return error('connection closed')
+				return err_connection_closed
 			}
 			wait {
-				return error('read deadline exceeded')
+				return err_read_deadline_exceeded
 			}
 		}
 	} else {
@@ -298,11 +298,11 @@ pub fn (mut c Conn) read_packet() ![]u8 {
 				return packet.clone()
 			}
 			_ := <-c.closed_chan {
-				return error('connection closed')
+				return err_connection_closed
 			}
 		}
 	}
-	return error('connection closed')
+	return err_connection_closed
 }
 
 pub fn (mut c Conn) close() ! {
@@ -383,6 +383,20 @@ fn (c &Conn) rtt_value() time.Duration {
 	rtt := c.rtt
 	c.lifecycle_mutex.unlock()
 	return rtt
+}
+
+fn (c &Conn) keepalive_interval_value() time.Duration {
+	c.lifecycle_mutex.lock()
+	v := c.keepalive_interval
+	c.lifecycle_mutex.unlock()
+	return v
+}
+
+fn (c &Conn) idle_timeout_value() time.Duration {
+	c.lifecycle_mutex.lock()
+	v := c.idle_timeout
+	c.lifecycle_mutex.unlock()
+	return v
 }
 
 fn (c &Conn) read_wait_timeout(now time.Time) (time.Duration, bool) {
@@ -515,9 +529,11 @@ fn (mut c Conn) receive(data []u8) ! {
 		return
 	}
 	c.queue_ack(seq)
+	c.mutex.lock()
+	rtt := c.resend.rtt(time.now())
+	c.mutex.unlock()
 	if c.win.shift() == 0 {
-		missing := c.win.missing(c.resend.rtt(time.now()) + c.resend.rtt(time.now()) / 2,
-			time.now())
+		missing := c.win.missing(rtt + rtt / 2, time.now())
 		if missing.len > 0 {
 			c.queue_nack(missing)
 		}
@@ -643,7 +659,8 @@ fn (mut c Conn) ack_loop() {
 		if c.is_closed() {
 			continue
 		}
-		if c.keepalive_interval > 0 && now - last_keepalive >= c.keepalive_interval {
+		keepalive_interval := c.keepalive_interval_value()
+		if keepalive_interval > 0 && now - last_keepalive >= keepalive_interval {
 			c.send_keepalive_ping() or {}
 			last_keepalive = now
 		}
@@ -653,17 +670,18 @@ fn (mut c Conn) ack_loop() {
 
 fn (mut c Conn) check_idle_timeout(now time.Time) {
 	last_activity := c.last_activity_at()
-	if c.is_closed() || c.idle_timeout <= 0 || last_activity.unix() == 0 {
+	idle_timeout := c.idle_timeout_value()
+	if c.is_closed() || idle_timeout <= 0 || last_activity.unix() == 0 {
 		return
 	}
-	if now - last_activity > c.idle_timeout {
+	if now - last_activity > idle_timeout {
 		c.close() or {}
 	}
 }
 
 fn (mut c Conn) send_keepalive_ping() ! {
 	if c.is_closing_or_closed() {
-		return error('connection closed')
+		return err_connection_closed
 	}
 	c.write_with_reliability(message.ConnectedPing{
 		ping_time: timestamp()
@@ -741,6 +759,7 @@ fn (mut c Conn) receive_packet(pk Packet) ! {
 		return
 	}
 	if c.packet_queue.window_size() > Uint24(max_window_size) {
+		c.close_immediately()
 		return error('packet queue window size is too big')
 	}
 	for content in c.packet_queue.fetch() {
@@ -831,7 +850,7 @@ fn wait_connected(conn &Conn, timeout time.Duration) ! {
 			return
 		}
 		timeout {
-			return error('connection timed out')
+			return err_connection_timed_out
 		}
 	}
 }
