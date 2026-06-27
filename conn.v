@@ -5,6 +5,9 @@ import sync
 import time
 import message
 
+const resend_min_delay = 50 * time.millisecond
+const resend_max_delay = 2 * time.second
+
 @[heap]
 pub struct Conn {
 mut:
@@ -30,6 +33,9 @@ mut:
 	last_activity       time.Time
 	idle_timeout        time.Duration
 	keepalive_interval  time.Duration
+	read_deadline       time.Time
+	write_deadline      time.Time
+	read_timeout        time.Duration
 	is_server           bool
 	listener            &Listener   = unsafe { nil }
 	mutex               &sync.Mutex = sync.new_mutex()
@@ -92,6 +98,53 @@ pub fn (c &Conn) latency() time.Duration {
 	return rtt / 2
 }
 
+pub fn (mut c Conn) set_read_deadline(deadline time.Time) {
+	c.lifecycle_mutex.lock()
+	c.read_deadline = deadline
+	c.lifecycle_mutex.unlock()
+}
+
+pub fn (mut c Conn) set_write_deadline(deadline time.Time) {
+	c.lifecycle_mutex.lock()
+	c.write_deadline = deadline
+	c.lifecycle_mutex.unlock()
+}
+
+pub fn (mut c Conn) set_deadline(deadline time.Time) {
+	c.lifecycle_mutex.lock()
+	c.read_deadline = deadline
+	c.write_deadline = deadline
+	c.lifecycle_mutex.unlock()
+}
+
+pub fn (mut c Conn) set_read_timeout(timeout time.Duration) {
+	c.lifecycle_mutex.lock()
+	c.read_timeout = timeout
+	c.lifecycle_mutex.unlock()
+}
+
+pub fn (mut c Conn) set_write_timeout(timeout time.Duration) {
+	c.lifecycle_mutex.lock()
+	if timeout <= 0 || timeout == net.infinite_timeout {
+		c.write_deadline = time.Time{}
+	} else {
+		c.write_deadline = time.now().add(timeout)
+	}
+	c.lifecycle_mutex.unlock()
+}
+
+pub fn (mut c Conn) set_idle_timeout(timeout time.Duration) {
+	c.lifecycle_mutex.lock()
+	c.idle_timeout = timeout
+	c.lifecycle_mutex.unlock()
+}
+
+pub fn (mut c Conn) set_keepalive_interval(interval time.Duration) {
+	c.lifecycle_mutex.lock()
+	c.keepalive_interval = interval
+	c.lifecycle_mutex.unlock()
+}
+
 pub fn (mut c Conn) write(data []u8) !int {
 	if data.len == 0 {
 		return error('cannot write empty packet')
@@ -106,6 +159,9 @@ fn (mut c Conn) write_with_reliability(data []u8, reliability Reliability) !int 
 fn (mut c Conn) write_with_reliability_internal(data []u8, reliability Reliability, allow_closing bool) !int {
 	if !allow_closing && c.is_closing_or_closed() {
 		return error('connection closed')
+	}
+	if c.write_deadline_expired(time.now()) {
+		return error('write deadline exceeded')
 	}
 	c.mutex.lock()
 	defer {
@@ -189,12 +245,27 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 		return error('connection closed')
 	}
 	mut data := []u8{}
-	select {
-		packet := <-c.packets {
-			data = packet.clone()
+	wait, has_timeout := c.read_wait_timeout(time.now())
+	if has_timeout {
+		select {
+			packet := <-c.packets {
+				data = packet.clone()
+			}
+			_ := <-c.closed_chan {
+				return error('connection closed')
+			}
+			wait {
+				return error('read deadline exceeded')
+			}
 		}
-		_ := <-c.closed_chan {
-			return error('connection closed')
+	} else {
+		select {
+			packet := <-c.packets {
+				data = packet.clone()
+			}
+			_ := <-c.closed_chan {
+				return error('connection closed')
+			}
 		}
 	}
 	if data.len > buf.len {
@@ -208,12 +279,27 @@ pub fn (mut c Conn) read_packet() ![]u8 {
 	if c.is_closed() {
 		return error('connection closed')
 	}
-	select {
-		packet := <-c.packets {
-			return packet.clone()
+	wait, has_timeout := c.read_wait_timeout(time.now())
+	if has_timeout {
+		select {
+			packet := <-c.packets {
+				return packet.clone()
+			}
+			_ := <-c.closed_chan {
+				return error('connection closed')
+			}
+			wait {
+				return error('read deadline exceeded')
+			}
 		}
-		_ := <-c.closed_chan {
-			return error('connection closed')
+	} else {
+		select {
+			packet := <-c.packets {
+				return packet.clone()
+			}
+			_ := <-c.closed_chan {
+				return error('connection closed')
+			}
 		}
 	}
 	return error('connection closed')
@@ -297,6 +383,40 @@ fn (c &Conn) rtt_value() time.Duration {
 	rtt := c.rtt
 	c.lifecycle_mutex.unlock()
 	return rtt
+}
+
+fn (c &Conn) read_wait_timeout(now time.Time) (time.Duration, bool) {
+	c.lifecycle_mutex.lock()
+	deadline := c.read_deadline
+	timeout := c.read_timeout
+	c.lifecycle_mutex.unlock()
+	mut has_timeout := false
+	mut wait := time.Duration(0)
+	if timeout > 0 && timeout != net.infinite_timeout {
+		wait = timeout
+		has_timeout = true
+	}
+	if !deadline.is_zero() {
+		remaining := deadline - now
+		if remaining <= 0 {
+			return time.Duration(0), true
+		}
+		if !has_timeout || remaining < wait {
+			wait = remaining
+		}
+		has_timeout = true
+	}
+	return wait, has_timeout
+}
+
+fn (c &Conn) write_deadline_expired(now time.Time) bool {
+	c.lifecycle_mutex.lock()
+	deadline := c.write_deadline
+	c.lifecycle_mutex.unlock()
+	if !deadline.is_zero() && now >= deadline {
+		return true
+	}
+	return false
 }
 
 fn (c &Conn) close_signal() chan bool {
@@ -417,13 +537,15 @@ fn (mut c Conn) receive(data []u8) ! {
 
 fn (mut c Conn) queue_ack(seq Uint24) {
 	c.ack_mutex.lock()
-	c.pending_ack << seq
+	append_unique_uint24(mut c.pending_ack, seq)
 	c.ack_mutex.unlock()
 }
 
 fn (mut c Conn) queue_nack(seqs []Uint24) {
 	c.ack_mutex.lock()
-	c.pending_nack << seqs
+	for seq in seqs {
+		append_unique_uint24(mut c.pending_nack, seq)
+	}
 	c.ack_mutex.unlock()
 }
 
@@ -554,7 +676,7 @@ fn (mut c Conn) check_resend(now time.Time) ! {
 		c.mutex.unlock()
 	}
 	rtt := c.resend.rtt(now)
-	delay := rtt + rtt / 2
+	delay := clamp_resend_delay(rtt + rtt / 2)
 	c.set_rtt(rtt)
 	for seq in c.resend.due(now, delay) {
 		mut pk, ok := c.resend.retransmit_at(seq, now)
@@ -562,6 +684,23 @@ fn (mut c Conn) check_resend(now time.Time) ! {
 			c.send_datagram_locked(mut pk)!
 		}
 	}
+}
+
+fn append_unique_uint24(mut values []Uint24, value Uint24) {
+	if value in values {
+		return
+	}
+	values << value
+}
+
+fn clamp_resend_delay(delay time.Duration) time.Duration {
+	if delay < resend_min_delay {
+		return resend_min_delay
+	}
+	if delay > resend_max_delay {
+		return resend_max_delay
+	}
+	return delay
 }
 
 fn (mut c Conn) receive_split_packet(pk Packet) ! {

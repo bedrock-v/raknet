@@ -6,6 +6,8 @@ import sync
 import time
 import message
 
+pub type PongDataFunc = fn (net.Addr) []u8
+
 pub struct ListenConfig {
 pub mut:
 	disable_cookies   bool
@@ -26,7 +28,8 @@ mut:
 	closed               bool
 	lifecycle_mutex      &sync.Mutex = sync.new_mutex()
 	pong_data            []u8
-	pong_data_mutex      &sync.Mutex = sync.new_mutex()
+	pong_data_func       PongDataFunc = unsafe { nil }
+	pong_data_mutex      &sync.Mutex  = sync.new_mutex()
 	max_mtu              u16
 	disable_cookies      bool
 	cookie_salt          u64
@@ -138,7 +141,33 @@ pub fn (mut l Listener) set_pong_data(data []u8) {
 	}
 	l.pong_data_mutex.lock()
 	l.pong_data = data.clone()
+	l.pong_data_func = unsafe { nil }
 	l.pong_data_mutex.unlock()
+}
+
+pub fn (mut l Listener) set_pong_data_func(f PongDataFunc) {
+	l.pong_data_mutex.lock()
+	l.pong_data_func = f
+	l.pong_data_mutex.unlock()
+}
+
+pub fn (mut l Listener) clear_pong_data_func() {
+	l.pong_data_mutex.lock()
+	l.pong_data_func = unsafe { nil }
+	l.pong_data_mutex.unlock()
+}
+
+pub fn (mut l Listener) block(addr net.Addr) {
+	l.block_addr(addr)
+}
+
+pub fn (mut l Listener) block_for(addr net.Addr, duration time.Duration) {
+	if duration <= 0 {
+		return
+	}
+	l.security_mutex.lock()
+	l.blocks[block_key(addr)] = time.now().add(duration)
+	l.security_mutex.unlock()
 }
 
 pub fn (mut l Listener) captured_packets() [][]u8 {
@@ -183,7 +212,7 @@ fn (mut l Listener) handle(data []u8, addr net.Addr) ! {
 	match data[0] {
 		message.id_unconnected_ping, message.id_unconnected_ping_open_connections {
 			ping_packet := message.decode_unconnected_ping(data[1..])!
-			pong_data := l.pong_data_clone()
+			pong_data := l.pong_data_for(addr)
 			l.udp.write_to(addr, message.UnconnectedPong{
 				ping_time:   ping_packet.ping_time
 				server_guid: l.id
@@ -326,9 +355,7 @@ fn (mut l Listener) block_addr(addr net.Addr) {
 	if l.block_duration <= 0 {
 		return
 	}
-	l.security_mutex.lock()
-	l.blocks[block_key(addr)] = time.now().add(l.block_duration)
-	l.security_mutex.unlock()
+	l.block_for(addr, l.block_duration)
 }
 
 fn (mut l Listener) addr_blocked(addr net.Addr) bool {
@@ -358,8 +385,17 @@ fn (mut l Listener) gc_blocks() {
 	l.security_mutex.unlock()
 }
 
-fn (mut l Listener) pong_data_clone() []u8 {
+fn (mut l Listener) pong_data_for(addr net.Addr) []u8 {
 	l.pong_data_mutex.lock()
+	f := l.pong_data_func
+	if voidptr(f) != unsafe { nil } {
+		l.pong_data_mutex.unlock()
+		data := f(addr)
+		if data.len > max_i16 {
+			panic('pong data must be no longer than ${max_i16} bytes')
+		}
+		return data.clone()
+	}
 	data := l.pong_data.clone()
 	l.pong_data_mutex.unlock()
 	return data
