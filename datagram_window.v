@@ -73,7 +73,7 @@ fn (mut win DatagramWindow) missing(since time.Duration, now time.Time) []Uint24
 	mut indices := []Uint24{}
 	mut missing := false
 	for raw := int(win.highest) - 1; raw >= int(win.lowest); raw-- {
-		index := Uint24(raw)
+		index := Uint24(u32(raw))
 		t := win.queue[index] or {
 			if missing {
 				indices << index

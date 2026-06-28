@@ -98,7 +98,7 @@ pub fn (l &Listener) accept_timeout(timeout time.Duration) !&Conn {
 	mut timed_out := false
 	open := select {
 		conn = <-l.incoming {}
-		timeout {
+		1 * timeout {
 			timed_out = true
 		}
 	}
@@ -129,7 +129,7 @@ pub fn (mut l Listener) close() ! {
 	}
 	l.connections.clear()
 	l.connections_mutex.unlock()
-	for conn in conns {
+	for mut conn in conns {
 		conn.close_immediately()
 	}
 	l.udp.close() or {}
@@ -256,7 +256,7 @@ fn (mut l Listener) handle(data []u8, addr net.Addr) ! {
 			}.encode())!
 			mut conn := new_conn(mut l.udp, addr, mtu, true, l)
 			l.put_conn(key, conn)
-			spawn l.cleanup_pending_handshake(key, conn)
+			spawn l.cleanup_pending_handshake(key, mut conn)
 		}
 		else {
 			return
@@ -306,7 +306,7 @@ fn (mut l Listener) delete_conn_if_same(key string, conn &Conn) {
 	l.connections_mutex.unlock()
 }
 
-fn (mut l Listener) cleanup_pending_handshake(key string, conn &Conn) {
+fn (mut l Listener) cleanup_pending_handshake(key string, mut conn Conn) {
 	time.sleep(l.handshake_timeout)
 	if conn.is_connected_confirmed() || conn.is_closed() {
 		return

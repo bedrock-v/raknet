@@ -77,21 +77,21 @@ fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, liste
 	return c
 }
 
-pub fn (c &Conn) remote_addr() string {
+pub fn (mut c Conn) remote_addr() string {
 	if c.remote_key != '' {
 		return c.remote_key
 	}
 	return c.remote.str()
 }
 
-pub fn (c &Conn) local_addr() string {
+pub fn (mut c Conn) local_addr() string {
 	if c.udp == unsafe { nil } {
 		return ''
 	}
 	return c.udp.sock.address() or { return '' }.str()
 }
 
-pub fn (c &Conn) latency() time.Duration {
+pub fn (mut c Conn) latency() time.Duration {
 	c.lifecycle_mutex.lock()
 	rtt := c.rtt
 	c.lifecycle_mutex.unlock()
@@ -254,7 +254,7 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 			_ := <-c.closed_chan {
 				return err_connection_closed
 			}
-			wait {
+			1 * wait {
 				return err_read_deadline_exceeded
 			}
 		}
@@ -288,7 +288,7 @@ pub fn (mut c Conn) read_packet() ![]u8 {
 			_ := <-c.closed_chan {
 				return err_connection_closed
 			}
-			wait {
+			1 * wait {
 				return err_read_deadline_exceeded
 			}
 		}
@@ -331,28 +331,28 @@ pub fn (mut c Conn) close() ! {
 	return
 }
 
-fn (c &Conn) is_closed() bool {
+fn (mut c Conn) is_closed() bool {
 	c.lifecycle_mutex.lock()
 	closed := c.closed
 	c.lifecycle_mutex.unlock()
 	return closed
 }
 
-fn (c &Conn) is_closing_or_closed() bool {
+fn (mut c Conn) is_closing_or_closed() bool {
 	c.lifecycle_mutex.lock()
 	closed := c.closed || c.closing
 	c.lifecycle_mutex.unlock()
 	return closed
 }
 
-fn (c &Conn) is_closing() bool {
+fn (mut c Conn) is_closing() bool {
 	c.lifecycle_mutex.lock()
 	closing := c.closing && !c.closed
 	c.lifecycle_mutex.unlock()
 	return closing
 }
 
-fn (c &Conn) is_open_for_receive() bool {
+fn (mut c Conn) is_open_for_receive() bool {
 	c.lifecycle_mutex.lock()
 	closed := c.closed
 	c.lifecycle_mutex.unlock()
@@ -365,7 +365,7 @@ fn (mut c Conn) mark_activity(now time.Time) {
 	c.lifecycle_mutex.unlock()
 }
 
-fn (c &Conn) last_activity_at() time.Time {
+fn (mut c Conn) last_activity_at() time.Time {
 	c.lifecycle_mutex.lock()
 	last := c.last_activity
 	c.lifecycle_mutex.unlock()
@@ -378,28 +378,28 @@ fn (mut c Conn) set_rtt(rtt time.Duration) {
 	c.lifecycle_mutex.unlock()
 }
 
-fn (c &Conn) rtt_value() time.Duration {
+fn (mut c Conn) rtt_value() time.Duration {
 	c.lifecycle_mutex.lock()
 	rtt := c.rtt
 	c.lifecycle_mutex.unlock()
 	return rtt
 }
 
-fn (c &Conn) keepalive_interval_value() time.Duration {
+fn (mut c Conn) keepalive_interval_value() time.Duration {
 	c.lifecycle_mutex.lock()
 	v := c.keepalive_interval
 	c.lifecycle_mutex.unlock()
 	return v
 }
 
-fn (c &Conn) idle_timeout_value() time.Duration {
+fn (mut c Conn) idle_timeout_value() time.Duration {
 	c.lifecycle_mutex.lock()
 	v := c.idle_timeout
 	c.lifecycle_mutex.unlock()
 	return v
 }
 
-fn (c &Conn) read_wait_timeout(now time.Time) (time.Duration, bool) {
+fn (mut c Conn) read_wait_timeout(now time.Time) (time.Duration, bool) {
 	c.lifecycle_mutex.lock()
 	deadline := c.read_deadline
 	timeout := c.read_timeout
@@ -410,7 +410,7 @@ fn (c &Conn) read_wait_timeout(now time.Time) (time.Duration, bool) {
 		wait = timeout
 		has_timeout = true
 	}
-	if !deadline.is_zero() {
+	if deadline != time.Time{} {
 		remaining := deadline - now
 		if remaining <= 0 {
 			return time.Duration(0), true
@@ -423,24 +423,24 @@ fn (c &Conn) read_wait_timeout(now time.Time) (time.Duration, bool) {
 	return wait, has_timeout
 }
 
-fn (c &Conn) write_deadline_expired(now time.Time) bool {
+fn (mut c Conn) write_deadline_expired(now time.Time) bool {
 	c.lifecycle_mutex.lock()
 	deadline := c.write_deadline
 	c.lifecycle_mutex.unlock()
-	if !deadline.is_zero() && now >= deadline {
+	if deadline != time.Time{} && now >= deadline {
 		return true
 	}
 	return false
 }
 
-fn (c &Conn) close_signal() chan bool {
+fn (mut c Conn) close_signal() chan bool {
 	c.lifecycle_mutex.lock()
 	ch := c.closed_chan
 	c.lifecycle_mutex.unlock()
 	return ch
 }
 
-fn (c &Conn) close_immediately() {
+fn (mut c Conn) close_immediately() {
 	c.lifecycle_mutex.lock()
 	if c.closed {
 		c.lifecycle_mutex.unlock()
@@ -492,7 +492,7 @@ fn (mut c Conn) mark_connected_once() bool {
 	return true
 }
 
-fn (c &Conn) is_connected_confirmed() bool {
+fn (mut c Conn) is_connected_confirmed() bool {
 	c.lifecycle_mutex.lock()
 	connected := c.connected_confirmed
 	c.lifecycle_mutex.unlock()
@@ -849,7 +849,7 @@ fn wait_connected(conn &Conn, timeout time.Duration) ! {
 		_ := <-conn.connected {
 			return
 		}
-		timeout {
+		1 * timeout {
 			return err_connection_timed_out
 		}
 	}

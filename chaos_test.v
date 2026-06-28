@@ -163,7 +163,7 @@ fn test_ordered_delivery_reversed_arrival() {
 		// 0x40+ avoids all connected control message IDs (0x00–0x15)
 		conn.receive_packet(Packet{
 			reliability: .reliable_ordered
-			order_index: Uint24(i)
+			order_index: Uint24(u32(i))
 			content:     [u8(0x40 + i)]
 		})!
 		if i > 0 {
