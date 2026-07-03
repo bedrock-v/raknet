@@ -188,7 +188,7 @@ fn (mut l Listener) loop() {
 			continue
 		}
 		l.capture_packet(buf[..n])
-		l.handle(buf[..n], addr) or { l.block_addr(addr) }
+		l.handle(buf[..n], addr) or { continue }
 	}
 }
 

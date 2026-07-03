@@ -64,7 +64,7 @@ fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, liste
 		pending_nack:       []Uint24{}
 		sent_raw:           [][]u8{}
 		last_activity:      time.now()
-		idle_timeout:       5 * time.second
+		idle_timeout:       30 * time.second
 		keepalive_interval: 250 * time.millisecond
 		is_server:          is_server
 		listener:           listener
@@ -218,7 +218,14 @@ fn (mut c Conn) write_with_reliability_internal(data []u8, reliability Reliabili
 			split_index:    u32(split_index)
 			split_id:       split_id
 		}
-		c.send_datagram_locked(mut pk)!
+		// A failed send must not abort the remaining fragments: a split is
+		// only usable when complete, and reliable fragments are already in
+		// the resend map before the write, so retransmission covers the gap.
+		c.send_datagram_locked(mut pk) or {
+			if !reliability.reliable() {
+				return err
+			}
+		}
 	}
 	return data.len
 }
@@ -255,20 +262,34 @@ fn (mut c Conn) write_raw(data []u8) ! {
 		c.sent_raw << data.clone()
 		return
 	}
-	if c.is_server {
-		c.udp.write_to(c.remote, data) or {
-			if c.is_closing_or_closed() {
-				return
+	// net.UdpConn write returns an error after EWOULDBLOCK even when the
+	// deferred send succeeded, so retry with a short backoff; duplicate
+	// datagrams are deduplicated by the receiver's datagram window.
+	for attempt := 0; ; attempt++ {
+		if c.is_server {
+			c.udp.write_to(c.remote, data) or {
+				if c.is_closing_or_closed() {
+					return
+				}
+				if attempt < 3 {
+					time.sleep(2 * time.millisecond)
+					continue
+				}
+				return err
 			}
-			return err
-		}
-	} else {
-		c.udp.write(data) or {
-			if c.is_closing_or_closed() {
-				return
+		} else {
+			c.udp.write(data) or {
+				if c.is_closing_or_closed() {
+					return
+				}
+				if attempt < 3 {
+					time.sleep(2 * time.millisecond)
+					continue
+				}
+				return err
 			}
-			return err
 		}
+		return
 	}
 }
 
