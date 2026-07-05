@@ -15,6 +15,7 @@ pub mut:
 	block_duration    time.Duration
 	capture_packets   bool
 	handshake_timeout time.Duration
+	error_log         LogFunc = unsafe { nil }
 }
 
 @[heap]
@@ -41,6 +42,7 @@ mut:
 	captured             [][]u8
 	capture_mutex        &sync.Mutex = sync.new_mutex()
 	handshake_timeout    time.Duration
+	error_log            LogFunc = unsafe { nil }
 }
 
 pub fn listen(address string) !&Listener {
@@ -49,7 +51,8 @@ pub fn listen(address string) !&Listener {
 
 pub fn (conf ListenConfig) listen(address string) !&Listener {
 	mut udp := net.listen_udp(address)!
-	udp.set_read_timeout(5 * time.second)
+	// Bounds how long loop() can be blocked in recvfrom() after close().
+	udp.set_read_timeout(background_read_poll_interval)
 	max_mtu := clamp_mtu(conf.max_mtu, min_mtu_size)
 	block_duration := if conf.block_duration == 0 { 10 * time.second } else { conf.block_duration }
 	handshake_timeout := if conf.handshake_timeout == 0 {
@@ -78,6 +81,7 @@ pub fn (conf ListenConfig) listen(address string) !&Listener {
 		captured:             [][]u8{}
 		capture_mutex:        sync.new_mutex()
 		handshake_timeout:    handshake_timeout
+		error_log:            conf.error_log
 	}
 	spawn listener.loop()
 	spawn listener.security_loop()
@@ -135,9 +139,9 @@ pub fn (mut l Listener) close() ! {
 	l.udp.close() or {}
 }
 
-pub fn (mut l Listener) set_pong_data(data []u8) {
+pub fn (mut l Listener) set_pong_data(data []u8) ! {
 	if data.len > max_i16 {
-		panic('pong data must be no longer than ${max_i16} bytes')
+		return err_pong_data_too_large
 	}
 	l.pong_data_mutex.lock()
 	l.pong_data = data.clone()
@@ -183,13 +187,28 @@ pub fn (mut l Listener) captured_packets() [][]u8 {
 fn (mut l Listener) loop() {
 	for !l.is_closed() {
 		mut buf := []u8{len: int(max_mtu_size)}
-		n, addr := l.udp.read(mut buf) or { continue }
+		n, addr := l.udp.read(mut buf) or {
+			l.log('read from', {
+				'error': err.msg()
+			})
+			continue
+		}
 		if n == 0 {
 			continue
 		}
 		l.capture_packet(buf[..n])
-		l.handle(buf[..n], addr) or { continue }
+		l.handle(buf[..n], addr) or {
+			l.log('handle packet', {
+				'raddr': addr.str()
+				'error': err.msg()
+			})
+			continue
+		}
 	}
+}
+
+fn (l &Listener) log(msg string, fields map[string]string) {
+	log_event(l.error_log, msg, fields)
 }
 
 fn (mut l Listener) capture_packet(data []u8) {
@@ -203,6 +222,9 @@ fn (mut l Listener) capture_packet(data []u8) {
 
 fn (mut l Listener) handle(data []u8, addr net.Addr) ! {
 	if l.addr_blocked(addr) {
+		l.log('blocked read', {
+			'raddr': addr.str()
+		})
 		return
 	}
 	key := normalise_addr_string(addr.str())
@@ -212,7 +234,7 @@ fn (mut l Listener) handle(data []u8, addr net.Addr) ! {
 	match data[0] {
 		message.id_unconnected_ping, message.id_unconnected_ping_open_connections {
 			ping_packet := message.decode_unconnected_ping(data[1..])!
-			pong_data := l.pong_data_for(addr)
+			pong_data := l.pong_data_for(addr)!
 			l.udp.write_to(addr, message.UnconnectedPong{
 				ping_time:   ping_packet.ping_time
 				server_guid: l.id
@@ -254,7 +276,7 @@ fn (mut l Listener) handle(data []u8, addr net.Addr) ! {
 				client_address: client_addr
 				mtu:            mtu
 			}.encode())!
-			mut conn := new_conn(mut l.udp, addr, mtu, true, l)
+			mut conn := new_conn(mut l.udp, addr, mtu, true, l, l.error_log)
 			l.put_conn(key, conn)
 			spawn l.cleanup_pending_handshake(key, mut conn)
 		}
@@ -385,14 +407,14 @@ fn (mut l Listener) gc_blocks() {
 	l.security_mutex.unlock()
 }
 
-fn (mut l Listener) pong_data_for(addr net.Addr) []u8 {
+fn (mut l Listener) pong_data_for(addr net.Addr) ![]u8 {
 	l.pong_data_mutex.lock()
 	f := l.pong_data_func
 	if voidptr(f) != unsafe { nil } {
 		l.pong_data_mutex.unlock()
 		data := f(addr)
 		if data.len > max_i16 {
-			panic('pong data must be no longer than ${max_i16} bytes')
+			return err_pong_data_too_large
 		}
 		return data.clone()
 	}

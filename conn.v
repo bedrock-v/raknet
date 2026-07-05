@@ -46,9 +46,10 @@ mut:
 	closing_deadline    time.Time
 	closing             bool
 	closed              bool
+	error_log           LogFunc = unsafe { nil }
 }
 
-fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, listener &Listener) &Conn {
+fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, listener &Listener, error_log LogFunc) &Conn {
 	mut c := &Conn{
 		udp:                unsafe { &udp }
 		remote:             remote
@@ -72,9 +73,14 @@ fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, liste
 		ack_mutex:          sync.new_mutex()
 		lifecycle_mutex:    sync.new_mutex()
 		closed_chan:        chan bool{cap: 1}
+		error_log:          error_log
 	}
 	spawn c.ack_loop()
 	return c
+}
+
+fn (mut c Conn) log(msg string, fields map[string]string) {
+	log_event(c.error_log, msg, fields)
 }
 
 pub fn (mut c Conn) remote_addr() string {
@@ -272,6 +278,11 @@ fn (mut c Conn) write_raw(data []u8) ! {
 					return
 				}
 				if attempt < 3 {
+					c.log('transient write error', {
+						'raddr':   c.remote.str()
+						'attempt': attempt.str()
+						'error':   err.msg()
+					})
 					time.sleep(2 * time.millisecond)
 					continue
 				}
@@ -283,6 +294,10 @@ fn (mut c Conn) write_raw(data []u8) ! {
 					return
 				}
 				if attempt < 3 {
+					c.log('transient write error', {
+						'attempt': attempt.str()
+						'error':   err.msg()
+					})
 					time.sleep(2 * time.millisecond)
 					continue
 				}
@@ -373,6 +388,9 @@ pub fn (mut c Conn) close() ! {
 	}
 	should_send_disconnect = c.mtu != 0
 	c.lifecycle_mutex.unlock()
+	c.log('close drain start', {
+		'timeout': close_drain_timeout.str()
+	})
 	if should_send_disconnect {
 		c.write_with_reliability_internal([message.id_disconnect_notification], .reliable_ordered,
 			true) or {}
@@ -530,6 +548,11 @@ fn (mut c Conn) check_close_drain(now time.Time) {
 	resend_empty := c.resend.len() == 0
 	c.mutex.unlock()
 	if resend_empty || now >= deadline {
+		if resend_empty {
+			c.log('close drain complete', {})
+		} else {
+			c.log('close drain timeout', {})
+		}
 		c.close_immediately()
 	}
 }
@@ -559,7 +582,8 @@ fn (mut c Conn) receive(data []u8) ! {
 	if data.len == 0 {
 		return
 	}
-	c.mark_activity(time.now())
+	now := time.now()
+	c.mark_activity(now)
 	if data[0] & bit_flag_ack != 0 {
 		c.handle_ack(data[1..])!
 		return
@@ -583,10 +607,10 @@ fn (mut c Conn) receive(data []u8) ! {
 	}
 	c.queue_ack(seq)
 	c.mutex.lock()
-	rtt := c.resend.rtt(time.now())
+	rtt := c.resend.rtt(now)
 	c.mutex.unlock()
 	if c.win.shift() == 0 {
-		missing := c.win.missing(rtt + rtt / 2, time.now())
+		missing := c.win.missing(rtt + rtt / 2, now)
 		if missing.len > 0 {
 			c.queue_nack(missing)
 		}
@@ -817,83 +841,6 @@ fn (mut c Conn) receive_packet(pk Packet) ! {
 	}
 	for content in c.packet_queue.fetch() {
 		c.handle_packet(content, pk.reliability)!
-	}
-}
-
-fn (mut c Conn) handle_packet(data []u8, reliability Reliability) ! {
-	if data.len == 0 {
-		return
-	}
-	match data[0] {
-		message.id_connection_request {
-			if !c.is_server {
-				return
-			}
-			req := message.decode_connection_request(data[1..])!
-			addr := addr_port_from_string(c.remote.str()) or { message.AddrPort{} }
-			c.write(message.ConnectionRequestAccepted{
-				client_address: addr
-				ping_time:      req.request_time
-				pong_time:      timestamp()
-			}.encode())!
-		}
-		message.id_connection_request_accepted {
-			if c.is_server {
-				return
-			}
-			accepted := message.decode_connection_request_accepted(data[1..])!
-			c.write(message.NewIncomingConnection{
-				server_address: accepted.client_address
-				ping_time:      accepted.pong_time
-				pong_time:      timestamp()
-			}.encode())!
-			if c.mark_connected_once() {
-				c.connected <- true or {}
-			}
-		}
-		message.id_new_incoming_connection {
-			if !c.is_server {
-				return
-			}
-			_ := message.decode_new_incoming_connection(data[1..])!
-			if c.mark_connected_once() {
-				c.connected <- true or {}
-				if c.listener != unsafe { nil } {
-					c.listener.queue_incoming(c)
-				}
-			}
-		}
-		message.id_disconnect_notification {
-			c.close_immediately()
-		}
-		message.id_connected_ping {
-			if data.len == 9 {
-				ping_packet := message.decode_connected_ping(data[1..])!
-				c.write_with_reliability(message.ConnectedPong{
-					ping_time: ping_packet.ping_time
-					pong_time: timestamp()
-				}.encode(), .unreliable)!
-			} else if reliability != .reliable_ordered {
-				return error('malformed connected ping')
-			} else {
-				c.packets <- data.clone()
-			}
-		}
-		message.id_connected_pong {
-			if data.len == 17 {
-				_ := message.decode_connected_pong(data[1..])!
-			} else if reliability != .reliable_ordered {
-				return error('malformed connected pong')
-			} else {
-				c.packets <- data.clone()
-			}
-		}
-		message.id_detect_lost_connections {
-			c.send_keepalive_ping()!
-		}
-		else {
-			c.packets <- data.clone()
-		}
 	}
 }
 

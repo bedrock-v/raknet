@@ -49,6 +49,30 @@ fn accept_large_payload(listener &Listener, done chan bool) {
 	done <- true
 }
 
+fn pseudo_random_payload(size int) []u8 {
+	mut value := u32(0x12345678)
+	mut out := []u8{len: size}
+	for i in 0 .. size {
+		value = value * u32(1664525) + u32(1013904223)
+		out[i] = u8(value >> 24)
+	}
+	return out
+}
+
+fn accept_exact_payload(listener &Listener, expected []u8, done chan bool) {
+	mut conn := listener.accept() or {
+		done <- false
+		return
+	}
+	mut buf := []u8{len: expected.len + 1}
+	n := conn.read(mut buf) or {
+		done <- false
+		return
+	}
+	ok := n == expected.len && buf[..n] == expected
+	done <- ok
+}
+
 fn wait_listener_block_count(mut listener Listener, min_count int, timeout time.Duration) bool {
 	deadline := time.now().add(timeout)
 	for time.now() < deadline {
@@ -82,6 +106,34 @@ fn test_local_listen_dial_write_read() {
 
 	time.sleep(50 * time.millisecond)
 	assert <-done
+}
+
+fn test_large_payload_split_roundtrip() {
+	mut payload := []u8{cap: 2 + 320_000}
+	payload << [u8(0xfe), 0x00]
+	payload << pseudo_random_payload(320_000)
+
+	mut listener := listen('127.0.0.1:0') or { panic(err) }
+	defer {
+		listener.close() or {}
+	}
+	done := chan bool{cap: 1}
+	spawn accept_exact_payload(listener, payload, done)
+
+	mut conn := dial(listener.addr()) or { panic(err) }
+	defer {
+		conn.close() or {}
+	}
+	conn.write(payload) or { panic(err) }
+
+	select {
+		ok := <-done {
+			assert ok
+		}
+		5 * time.second {
+			assert false, 'large split payload was not delivered intact'
+		}
+	}
 }
 
 fn test_ipv6_addr_port_from_string() {
@@ -291,7 +343,7 @@ fn test_ping_returns_pong_data() {
 	defer {
 		listener.close() or {}
 	}
-	listener.set_pong_data('MCPE;V RakNet'.bytes())
+	listener.set_pong_data('MCPE;V RakNet'.bytes()) or { panic(err) }
 	data := ping(listener.addr()) or { panic(err) }
 	assert data.bytestr() == 'MCPE;V RakNet'
 }

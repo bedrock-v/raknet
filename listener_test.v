@@ -7,7 +7,7 @@ fn test_dynamic_pong_data() {
 	defer {
 		listener.close() or {}
 	}
-	listener.set_pong_data('static pong'.bytes())
+	listener.set_pong_data('static pong'.bytes()) or { panic(err) }
 	listener.set_pong_data_func(dynamic_test_pong_data)
 	assert ping(listener.addr()) or { panic(err) }.bytestr() == 'dynamic pong'
 	listener.clear_pong_data_func()

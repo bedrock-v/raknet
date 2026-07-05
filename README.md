@@ -14,7 +14,7 @@ defer {
 	listener.close() or {}
 }
 
-listener.set_pong_data('raknet server'.bytes())
+listener.set_pong_data('raknet server'.bytes())!
 
 mut conn := listener.accept()!
 mut buf := []u8{len: 4096}
@@ -69,6 +69,22 @@ dialer := raknet.Dialer{
 	timeout: 2 * time.second
 }
 mut conn := dialer.dial(listener.addr())!
+```
+
+## Logging
+
+`ListenConfig` and `Dialer` both accept an optional `error_log` hook for
+diagnostic events (blocked reads, transient UDP errors, close-drain progress...)
+that would otherwise be silently dropped:
+
+```v
+fn on_event(msg string, fields map[string]string) {
+	eprintln('${msg}: ${fields}')
+}
+
+mut listener := raknet.ListenConfig{
+	error_log: on_event
+}.listen('0.0.0.0:19132')!
 ```
 
 ## Tests

@@ -137,7 +137,10 @@ fn main() {
 	defer {
 		listener.close() or {}
 	}
-	listener.set_pong_data('raknet chat'.bytes())
+	listener.set_pong_data('raknet chat'.bytes()) or {
+		eprintln('set_pong_data failed: ${err.msg()}')
+		return
+	}
 	mut room := new_room()
 	println('chat server listening on ${listener.addr()}')
 

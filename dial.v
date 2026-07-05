@@ -10,10 +10,10 @@ pub mut:
 	max_mtu              u16
 	timeout              time.Duration
 	max_transient_errors int
+	error_log            LogFunc = unsafe { nil }
 }
 
 const mtu_probe_sizes = [u16(max_mtu_size), 1200, 576]
-const client_loop_read_timeout = 250 * time.millisecond
 
 pub fn ping(address string) ![]u8 {
 	return Dialer{}.ping_timeout(address, 5 * time.second)
@@ -87,6 +87,10 @@ pub fn (dialer Dialer) dial(address string) !&Conn {
 			if is_transient_udp_read_error(err)
 				&& dialer.can_retry_transient_error(transient_errors) {
 				transient_errors++
+				dialer.log('transient udp error', {
+					'stage': 'connection_request_2'
+					'error': err.msg()
+				})
 				continue
 			}
 			if err.code() == net.err_timed_out_code {
@@ -103,8 +107,8 @@ pub fn (dialer Dialer) dial(address string) !&Conn {
 	}
 	reply2 := message.decode_open_connection_reply_2(buf[1..n2])!
 
-	mut conn := new_conn(mut udp, remote, reply2.mtu, false, unsafe { nil })
-	udp.set_read_timeout(client_loop_read_timeout)
+	mut conn := new_conn(mut udp, remote, reply2.mtu, false, unsafe { nil }, dialer.error_log)
+	udp.set_read_timeout(background_read_poll_interval)
 	spawn client_loop(mut conn)
 	conn.write(message.ConnectionRequest{
 		client_guid:  client_id
@@ -131,6 +135,10 @@ fn (dialer Dialer) discover_mtu(mut udp net.UdpConn, mut buf []u8, timeout time.
 				if is_transient_udp_read_error(err)
 					&& dialer.can_retry_transient_error(transient_errors) {
 					transient_errors++
+					dialer.log('transient udp error', {
+						'stage': 'discover_mtu'
+						'error': err.msg()
+					})
 					continue
 				}
 				if time.now() - start >= timeout {
@@ -156,6 +164,10 @@ fn (dialer Dialer) discover_mtu(mut udp net.UdpConn, mut buf []u8, timeout time.
 		}
 	}
 	return error('expected open connection reply 1')
+}
+
+fn (dialer Dialer) log(msg string, fields map[string]string) {
+	log_event(dialer.error_log, msg, fields)
 }
 
 fn (dialer Dialer) can_retry_transient_error(count int) bool {
@@ -184,11 +196,19 @@ fn client_loop(mut conn Conn) {
 			if conn.is_closed() {
 				break
 			}
+			conn.log('transient udp error', {
+				'stage': 'client_loop'
+				'error': err.msg()
+			})
 			continue
 		}
 		if n == 0 {
 			continue
 		}
-		conn.receive(buf[..n]) or {}
+		conn.receive(buf[..n]) or {
+			conn.log('receive packet', {
+				'error': err.msg()
+			})
+		}
 	}
 }
