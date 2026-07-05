@@ -1,7 +1,7 @@
 Module {
 	name: 'raknet'
 	description: 'RakNet protocol implementation for V.'
-	version: '0.2.0'
-	license: 'MIT'
+	version: '0.3.0'
+	license: 'LGPL-3.0'
 	dependencies: []
 }
