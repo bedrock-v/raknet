@@ -20,7 +20,8 @@ mut:
 	sequence_idx        Uint24
 	order_idx           Uint24
 	split_id            u32
-	packets             chan []u8
+	packets             PacketChan = new_packet_chan(packet_chan_initial_cap, packet_chan_max_cap,
+		packet_chan_max_bytes)
 	connected           chan bool
 	splits              map[u16][][]u8
 	resend              ResendMap
@@ -55,7 +56,8 @@ fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, liste
 		remote:             remote
 		remote_key:         normalise_addr_string(remote.str())
 		mtu:                clamp_mtu(mtu, min_mtu_size)
-		packets:            chan []u8{cap: 256}
+		packets:            new_packet_chan(packet_chan_initial_cap, packet_chan_max_cap,
+			packet_chan_max_bytes)
 		connected:          chan bool{cap: 1}
 		splits:             map[u16][][]u8{}
 		resend:             new_resend_map()
@@ -271,7 +273,7 @@ fn (mut c Conn) write_raw(data []u8) ! {
 	// net.UdpConn write returns an error after EWOULDBLOCK even when the
 	// deferred send succeeded, so retry with a short backoff; duplicate
 	// datagrams are deduplicated by the receiver's datagram window.
-	for attempt := 0; ; attempt++ {
+	for attempt := 0; true; attempt++ {
 		if c.is_server {
 			c.udp.write_to(c.remote, data) or {
 				if c.is_closing_or_closed() {
@@ -314,9 +316,14 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 	}
 	mut data := []u8{}
 	wait, has_timeout := c.read_wait_timeout(time.now())
+	ch := c.packets.rlock_chan()
+	defer {
+		c.packets.runlock()
+	}
 	if has_timeout {
 		select {
-			packet := <-c.packets {
+			packet := <-ch {
+				c.packets.mark_delivered(packet.len)
 				data = packet.clone()
 			}
 			_ := <-c.closed_chan {
@@ -328,7 +335,8 @@ pub fn (mut c Conn) read(mut buf []u8) !int {
 		}
 	} else {
 		select {
-			packet := <-c.packets {
+			packet := <-ch {
+				c.packets.mark_delivered(packet.len)
 				data = packet.clone()
 			}
 			_ := <-c.closed_chan {
@@ -348,9 +356,14 @@ pub fn (mut c Conn) read_packet() ![]u8 {
 		return err_connection_closed
 	}
 	wait, has_timeout := c.read_wait_timeout(time.now())
+	ch := c.packets.rlock_chan()
+	defer {
+		c.packets.runlock()
+	}
 	if has_timeout {
 		select {
-			packet := <-c.packets {
+			packet := <-ch {
+				c.packets.mark_delivered(packet.len)
 				return packet.clone()
 			}
 			_ := <-c.closed_chan {
@@ -362,7 +375,8 @@ pub fn (mut c Conn) read_packet() ![]u8 {
 		}
 	} else {
 		select {
-			packet := <-c.packets {
+			packet := <-ch {
+				c.packets.mark_delivered(packet.len)
 				return packet.clone()
 			}
 			_ := <-c.closed_chan {
@@ -841,6 +855,21 @@ fn (mut c Conn) receive_packet(pk Packet) ! {
 	}
 	for content in c.packet_queue.fetch() {
 		c.handle_packet(content, pk.reliability)!
+	}
+}
+
+// push_packet enqueues data for delivery via read()/read_packet(). If the
+// backlog has grown to packet_chan_max_cap and is still full, this
+// connection's consumer is unrecoverably behind: close immediately so
+// this can never stall Listener.loop() for every other connection
+// sharing the same thread.
+fn (mut c Conn) push_packet(data []u8) ! {
+	if !c.packets.send(data) {
+		c.log('packet backlog exceeded', {
+			'raddr': c.remote_addr()
+		})
+		c.close_immediately()
+		return error('packet backlog exceeded; connection closed')
 	}
 }
 

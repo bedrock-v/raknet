@@ -29,7 +29,7 @@ fn (mut c Conn) handle_packet(data []u8, reliability Reliability) ! {
 			c.send_keepalive_ping()!
 		}
 		else {
-			c.packets <- data.clone()
+			c.push_packet(data.clone())!
 		}
 	}
 }
@@ -85,7 +85,7 @@ fn (mut c Conn) handle_connected_ping(data []u8, reliability Reliability) ! {
 	} else if reliability != .reliable_ordered {
 		return error('malformed connected ping')
 	} else {
-		c.packets <- data.clone()
+		c.push_packet(data.clone())!
 	}
 }
 
@@ -95,6 +95,6 @@ fn (mut c Conn) handle_connected_pong(data []u8, reliability Reliability) ! {
 	} else if reliability != .reliable_ordered {
 		return error('malformed connected pong')
 	} else {
-		c.packets <- data.clone()
+		c.push_packet(data.clone())!
 	}
 }

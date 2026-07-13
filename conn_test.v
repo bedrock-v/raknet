@@ -14,7 +14,7 @@ fn test_pending_ack_dedupe() {
 
 fn test_read_timeout() {
 	mut conn := &Conn{
-		packets:     chan []u8{cap: 1}
+		packets:     new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
 		closed_chan: chan bool{cap: 1}
 	}
 	conn.set_read_timeout(10 * time.millisecond)
@@ -28,7 +28,7 @@ fn test_read_timeout() {
 
 fn test_read_deadline() {
 	mut conn := &Conn{
-		packets:     chan []u8{cap: 1}
+		packets:     new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
 		closed_chan: chan bool{cap: 1}
 	}
 	conn.set_read_deadline(time.now().add(-time.millisecond))
@@ -44,7 +44,7 @@ fn test_read_deadline() {
 fn test_deadline_can_be_cleared() {
 	mut conn := &Conn{
 		mtu:         max_mtu_size
-		packets:     chan []u8{cap: 1}
+		packets:     new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
 		closed_chan: chan bool{cap: 1}
 	}
 	conn.set_deadline(time.now().add(-time.millisecond))

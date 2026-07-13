@@ -18,7 +18,7 @@ fn test_packet_loss_recovery_via_resend() {
 
 	mut receiver := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 16}
+		packets:      new_packet_chan(16, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -53,7 +53,7 @@ fn test_packet_loss_recovery_via_resend() {
 	mut got := []u8{}
 	for _ in 0 .. count {
 		select {
-			data := <-receiver.packets {
+			data := <-receiver.packets.ch {
 				assert data.len == 1
 				got << data[0]
 			}
@@ -80,7 +80,7 @@ fn test_ack_loss_triggers_full_resend() {
 
 	mut receiver := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 8}
+		packets:      new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -95,11 +95,11 @@ fn test_ack_loss_triggers_full_resend() {
 	assert sender.sent_raw.len - before_resend == 4
 
 	// receiver deduplicates via datagram window; packet count must not grow
-	before_pkts := receiver.packets.len
+	before_pkts := receiver.packets.ch.len
 	for i in before_resend .. sender.sent_raw.len {
 		receiver.receive(sender.sent_raw[i])!
 	}
-	assert receiver.packets.len == before_pkts
+	assert receiver.packets.ch.len == before_pkts
 }
 
 // Drops the middle fragment of a split payload, lets the receiver generate a
@@ -115,7 +115,7 @@ fn test_split_nack_recovery_delivers_full_payload() {
 
 	mut receiver := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -142,7 +142,7 @@ fn test_split_nack_recovery_delivers_full_payload() {
 	receiver.receive(sender.sent_raw[3])!
 
 	select {
-		got := <-receiver.packets {
+		got := <-receiver.packets.ch {
 			assert got == payload
 		}
 		100 * time.millisecond {
@@ -155,7 +155,7 @@ fn test_split_nack_recovery_delivers_full_payload() {
 // index 0 arrives, then flush all 5 in correct order.
 fn test_ordered_delivery_reversed_arrival() {
 	mut conn := &Conn{
-		packets:      chan []u8{cap: 8}
+		packets:      new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
 		packet_queue: new_packet_queue()
 	}
 	n := 5
@@ -167,12 +167,12 @@ fn test_ordered_delivery_reversed_arrival() {
 			content:     [u8(0x40 + i)]
 		})!
 		if i > 0 {
-			assert conn.packets.len == 0
+			assert conn.packets.ch.len == 0
 		}
 	}
 	for i in 0 .. n {
 		select {
-			data := <-conn.packets {
+			data := <-conn.packets.ch {
 				assert data == [u8(0x40 + i)]
 			}
 			50 * time.millisecond {
@@ -186,7 +186,7 @@ fn test_ordered_delivery_reversed_arrival() {
 fn test_duplicate_storm_single_delivery() {
 	mut conn := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 8}
+		packets:      new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -204,7 +204,7 @@ fn test_duplicate_storm_single_delivery() {
 	for _ in 0 .. 10 {
 		conn.receive(dg)!
 	}
-	assert conn.packets.len == 1
+	assert conn.packets.ch.len == 1
 }
 
 // A datagram whose seq is beyond max_window_size ahead of the current lowest

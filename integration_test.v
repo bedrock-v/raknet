@@ -198,7 +198,7 @@ fn test_split_payload_over_small_mtu() {
 
 fn test_conn_delivers_reliable_ordered_packets_in_order() {
 	mut conn := &Conn{
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		packet_queue: new_packet_queue()
 	}
 	conn.receive_packet(Packet{
@@ -207,7 +207,7 @@ fn test_conn_delivers_reliable_ordered_packets_in_order() {
 		content:     [u8(0xbb)]
 	})!
 	select {
-		_ := <-conn.packets {
+		_ := <-conn.packets.ch {
 			assert false, 'out-of-order packet was delivered too early'
 		}
 		else {}
@@ -217,14 +217,14 @@ fn test_conn_delivers_reliable_ordered_packets_in_order() {
 		order_index: Uint24(0)
 		content:     [u8(0xaa)]
 	})!
-	assert (<-conn.packets) == [u8(0xaa)]
-	assert (<-conn.packets) == [u8(0xbb)]
+	assert (<-conn.packets.ch) == [u8(0xaa)]
+	assert (<-conn.packets.ch) == [u8(0xbb)]
 }
 
 fn test_conn_drops_duplicate_datagrams() {
 	mut conn := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -240,10 +240,10 @@ fn test_conn_drops_duplicate_datagrams() {
 	pk.write(mut datagram)
 
 	conn.receive(datagram)!
-	assert (<-conn.packets) == [u8(0xaa)]
+	assert (<-conn.packets.ch) == [u8(0xaa)]
 	conn.receive(datagram)!
 	select {
-		_ := <-conn.packets {
+		_ := <-conn.packets.ch {
 			assert false, 'duplicate datagram delivered packet twice'
 		}
 		else {}
@@ -411,7 +411,7 @@ fn mtu_probe_fake_server(mut udp net.UdpConn, probes chan u16, done chan bool) {
 	mut conn := &Conn{
 		udp:          unsafe { &udp }
 		mtu:          1200
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		connected:    chan bool{cap: 1}
 		splits:       map[u16][][]u8{}
 		resend:       new_resend_map()
@@ -538,7 +538,7 @@ fn make_reliable_datagram(seq Uint24, order Uint24, content []u8) []u8 {
 fn test_conn_batches_acknowledgements_until_flush() {
 	mut conn := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -557,7 +557,7 @@ fn test_conn_batches_acknowledgements_until_flush() {
 fn test_conn_chunks_large_acknowledgement_batches_by_mtu() {
 	mut conn := &Conn{
 		mtu:     64
-		packets: chan []u8{cap: 4}
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		resend:  new_resend_map()
 	}
 	mut packets := []Uint24{}
@@ -610,13 +610,13 @@ fn test_conn_recovers_from_dropped_datagram_with_nack() {
 
 	mut receiver := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
 	}
 	receiver.receive(sender.sent_raw[0])!
-	assert (<-receiver.packets) == [u8(1)]
+	assert (<-receiver.packets.ch) == [u8(1)]
 
 	time.sleep(80 * time.millisecond)
 	receiver.receive(sender.sent_raw[2])!
@@ -639,8 +639,8 @@ fn test_conn_recovers_from_dropped_datagram_with_nack() {
 	assert sender.sent_raw.len == 4
 
 	receiver.receive(sender.sent_raw[3])!
-	assert (<-receiver.packets) == [u8(2)]
-	assert (<-receiver.packets) == [u8(3)]
+	assert (<-receiver.packets.ch) == [u8(2)]
+	assert (<-receiver.packets.ch) == [u8(3)]
 }
 
 fn test_conn_latency_tracks_ack_round_trip() {
@@ -665,7 +665,7 @@ fn test_conn_latency_tracks_ack_round_trip() {
 
 fn test_conn_read_packet_fails_after_close() {
 	mut conn := &Conn{
-		packets: chan []u8{cap: 1}
+		packets: new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
 	}
 	conn.close()!
 	conn.read_packet() or {
@@ -726,7 +726,7 @@ fn test_conn_close_finishes_after_drain_timeout() {
 fn test_conn_receive_after_close_is_noop() {
 	mut conn := &Conn{
 		mtu:          max_mtu_size
-		packets:      chan []u8{cap: 1}
+		packets:      new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
 		win:          new_datagram_window()
 		packet_queue: new_packet_queue()
 		resend:       new_resend_map()
@@ -736,7 +736,7 @@ fn test_conn_receive_after_close_is_noop() {
 	conn.receive(make_reliable_datagram(Uint24(0), Uint24(0), [u8(0xaa)]))!
 	assert conn.sent_raw.len == 0
 	select {
-		_ := <-conn.packets {
+		_ := <-conn.packets.ch {
 			assert false, 'closed connection delivered packet'
 		}
 		else {}
@@ -752,7 +752,7 @@ fn test_conn_reassembles_split_payload_directly() {
 	assert sender.sent_raw.len == 3
 	mut receiver := &Conn{
 		mtu:           max_mtu_size
-		packets:       chan []u8{cap: 4}
+		packets:       new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		win:           new_datagram_window()
 		packet_queue:  new_packet_queue()
 		resend:        new_resend_map()
@@ -768,7 +768,7 @@ fn test_conn_reassembles_split_payload_directly() {
 	}
 	assert receiver.splits.len == 0
 	select {
-		got := <-receiver.packets {
+		got := <-receiver.packets.ch {
 			assert got == payload
 		}
 		100 * time.millisecond {
@@ -811,7 +811,7 @@ fn test_conn_close_removes_listener_connection() {
 fn test_conn_remote_disconnect_closes_without_echo() {
 	mut conn := &Conn{
 		mtu:             max_mtu_size
-		packets:         chan []u8{cap: 4}
+		packets:         new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		connected:       chan bool{cap: 1}
 		lifecycle_mutex: sync.new_mutex()
 		ack_mutex:       sync.new_mutex()
@@ -826,7 +826,7 @@ fn test_conn_remote_disconnect_closes_without_echo() {
 fn test_conn_duplicate_new_incoming_connection_does_not_block() {
 	mut conn := &Conn{
 		is_server:       true
-		packets:         chan []u8{cap: 4}
+		packets:         new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		connected:       chan bool{cap: 1}
 		lifecycle_mutex: sync.new_mutex()
 		ack_mutex:       sync.new_mutex()
@@ -867,7 +867,7 @@ fn test_conn_public_addresses_and_latency_defaults() {
 
 fn test_conn_rejects_packet_queue_window_over_limit() {
 	mut conn := &Conn{
-		packets:      chan []u8{cap: 4}
+		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		packet_queue: new_packet_queue()
 	}
 	conn.receive_packet(Packet{
@@ -985,4 +985,61 @@ fn test_listener_blocks_invalid_cookie_and_unblocks_after_duration() {
 	}
 	assert n3 > 0
 	assert buf[0] == message.id_open_connection_reply_1
+}
+
+fn accept_one(listener &Listener, out chan &Conn) {
+	conn := listener.accept() or { return }
+	out <- conn
+}
+
+fn test_slow_connection_does_not_stall_listener() {
+	mut listener := listen('127.0.0.1:0') or { panic(err) }
+	defer {
+		listener.close() or {}
+	}
+
+	server_a_out := chan &Conn{cap: 1}
+	spawn accept_one(listener, server_a_out)
+	mut client_a := dial(listener.addr()) or { panic(err) }
+	mut server_a := &Conn(unsafe { nil })
+	select {
+		conn := <-server_a_out {
+			server_a = conn
+		}
+		2 * time.second {
+			assert false, 'listener did not accept conn A in time'
+			return
+		}
+	}
+
+	// Swap in a tiny backlog cap for this one connection so the test only
+	// needs a couple dozen writes to exceed it, instead of the full
+	// packet_chan_max_cap (8192): under `v test .`'s parallel execution,
+	// thousands of tight loop writes measurably load the loopback network
+	// stack and made this test (and its neighbours) flaky for reasons
+	// unrelated to the property being verified.
+	server_a.packets = new_packet_chan(4, 16, packet_chan_max_bytes)
+
+	mut closed := false
+	deadline := time.now().add(5 * time.second)
+	max_attempts := 64
+	mut i := 0
+	for !closed && i < max_attempts && time.now() < deadline {
+		client_a.write_unreliable([u8(i % 256)]) or {}
+		closed = server_a.is_closed()
+		i++
+	}
+	assert closed, 'server-side conn A should close once its packet backlog is exceeded'
+
+	// The shared Listener.loop() thread must still be able to service other
+	// traffic even though conn A's backlog just overflowed. This is the
+	// actual architectural property the elastic packet channel exists to
+	// protect. Proven with an unconnected ping/pong rather than a second
+	// full connection handshake: answering it is handled entirely inline
+	// by Listener.loop() (see Listener.handle()'s id_unconnected_ping
+	// branch), with no Conn/accept() involved.
+	ping_timeout(listener.addr(), 2 * time.second) or {
+		assert false, 'listener appears stalled: unconnected ping got no reply after conn A backlog overflow: ${err}'
+		return
+	}
 }
