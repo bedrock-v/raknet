@@ -300,7 +300,10 @@ fn (mut l Listener) receive_for_key(key string, data []u8) !bool {
 		return false
 	}
 	l.connections_mutex.unlock()
-	active_conn.receive(data)!
+	active_conn.receive(data) or {
+		active_conn.close_immediately()
+		return err
+	}
 	return true
 }
 
