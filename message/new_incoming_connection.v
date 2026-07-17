@@ -23,7 +23,7 @@ pub fn (pk NewIncomingConnection) encode() []u8 {
 
 pub fn decode_new_incoming_connection(data []u8) !NewIncomingConnection {
 	addr, mut offset := read_addr(data)!
-	for _ in 0 .. 20 {
+	for data.len - offset >= sizeof_addr4 + 16 {
 		_, n := read_addr(data[offset..])!
 		offset += n
 	}

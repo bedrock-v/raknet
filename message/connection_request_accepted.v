@@ -26,7 +26,7 @@ pub fn (pk ConnectionRequestAccepted) encode() []u8 {
 pub fn decode_connection_request_accepted(data []u8) !ConnectionRequestAccepted {
 	addr, mut offset := read_addr(data)!
 	offset += 2
-	for _ in 0 .. 20 {
+	for data.len - offset >= sizeof_addr4 + 16 {
 		_, n := read_addr(data[offset..])!
 		offset += n
 	}
