@@ -40,3 +40,54 @@ fn test_ack_mtu_boundary() {
 	assert n == 2
 	assert out.len <= 12
 }
+
+fn test_ack_chunking_preserves_shuffled_packets() {
+	for flag in [bit_flag_ack, bit_flag_nack] {
+		for mtu in [u16(16), 1200] {
+			mut ack := Acknowledgement{
+				packets: [Uint24(300), 10, 250, 20, 200, 30, 150, 40, 100, 50]
+			}
+			mut received := []Uint24{}
+			mut chunks := 0
+			for ack.packets.len > 0 {
+				mut out := [u8(flag | bit_flag_datagram)]
+				n := ack.write(mut out, mtu)
+				assert n > 0
+				assert n <= ack.packets.len
+				assert out.len <= int(mtu)
+				mut decoded := Acknowledgement{}
+				decoded.read(out[1..])!
+				assert decoded.packets.len == n
+				received << decoded.packets
+				ack.packets = ack.packets[n..].clone()
+				chunks++
+			}
+			if mtu == 16 {
+				assert chunks > 1
+			} else {
+				assert chunks == 1
+			}
+			received.sort(a < b)
+			assert received == [Uint24(10), 20, 30, 40, 50, 100, 150, 200, 250, 300]
+		}
+	}
+}
+
+fn test_ack_chunking_mixed_records_respects_mtu() {
+	mut ack := Acknowledgement{
+		packets: [Uint24(1), 10, 11, 12, 50]
+	}
+	mut received := []Uint24{}
+	for ack.packets.len > 0 {
+		mut out := [u8(bit_flag_ack | bit_flag_datagram)]
+		n := ack.write(mut out, 16)
+		assert n > 0
+		assert out.len <= 16
+		mut decoded := Acknowledgement{}
+		decoded.read(out[1..])!
+		assert decoded.packets.len == n
+		received << decoded.packets
+		ack.packets = ack.packets[n..].clone()
+	}
+	assert received == [Uint24(1), 10, 11, 12, 50]
+}

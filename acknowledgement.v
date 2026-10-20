@@ -17,31 +17,42 @@ fn (mut ack Acknowledgement) write(mut out []u8, mtu u16) int {
 	if ack.packets.len == 0 {
 		return 0
 	}
-	mut packets := ack.packets.clone()
-	packets.sort(a < b)
+	// Callers consume the encoded prefix from this same array.
+	ack.packets.sort(a < b)
 	mut first := Uint24(0)
 	mut last := Uint24(0)
 	mut records := u16(0)
 	mut n := 0
-	for index, pk in packets {
-		if out.len >= int(mtu) - 7 {
-			break
-		}
-		n++
+	for index, pk in ack.packets {
 		if index == 0 {
+			if out.len + 4 > int(mtu) {
+				break
+			}
 			first = pk
 			last = pk
+			n++
 			continue
 		}
 		if pk == Uint24(u32(last) + 1) {
+			if out.len + 7 > int(mtu) {
+				break
+			}
 			last = pk
+			n++
 			continue
+		}
+		record_size := if first == last { 4 } else { 7 }
+		if out.len + record_size + 4 > int(mtu) {
+			break
 		}
 		records = write_ack_record(mut out, first, last, records)
 		first = pk
 		last = pk
+		n++
 	}
-	records = write_ack_record(mut out, first, last, records)
+	if n > 0 {
+		records = write_ack_record(mut out, first, last, records)
+	}
 	binary.big_endian_put_u16_at(mut out, records, len_offset)
 	return n
 }
