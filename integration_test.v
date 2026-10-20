@@ -210,7 +210,8 @@ fn test_conn_delivers_reliable_ordered_packets_in_order() {
 		_ := <-conn.packets.ch {
 			assert false, 'out-of-order packet was delivered too early'
 		}
-		else {}
+		else {
+		}
 	}
 	conn.receive_packet(Packet{
 		reliability: .reliable_ordered
@@ -246,7 +247,8 @@ fn test_conn_drops_duplicate_datagrams() {
 		_ := <-conn.packets.ch {
 			assert false, 'duplicate datagram delivered packet twice'
 		}
-		else {}
+		else {
+		}
 	}
 }
 
@@ -493,7 +495,8 @@ fn mtu_probe_fake_server(mut udp net.UdpConn, probes chan u16, done chan bool) {
 				done <- true
 				return
 			}
-			else {}
+			else {
+			}
 		}
 	}
 	_ = client_addr
@@ -739,7 +742,8 @@ fn test_conn_receive_after_close_is_noop() {
 		_ := <-conn.packets.ch {
 			assert false, 'closed connection delivered packet'
 		}
-		else {}
+		else {
+		}
 	}
 }
 
@@ -990,6 +994,78 @@ fn test_listener_blocks_invalid_cookie_and_unblocks_after_duration() {
 fn accept_one(listener &Listener, out chan &Conn) {
 	conn := listener.accept() or { return }
 	out <- conn
+}
+
+fn test_full_accept_backlog_does_not_stall_existing_peer() {
+	mut listener := listen('127.0.0.1:0')!
+	mut clients := []&Conn{}
+	defer {
+		listener.close() or {}
+		for mut client in clients {
+			client.close_immediately()
+		}
+	}
+	mut client := dial_timeout(listener.addr(), 2 * time.second)!
+	clients << client
+	mut server := listener.accept_timeout(2 * time.second)!
+	client.set_read_timeout(2 * time.second)
+	server.set_read_timeout(2 * time.second)
+
+	for _ in 0 .. listener.incoming.cap {
+		clients << dial_timeout(listener.addr(), 2 * time.second)!
+	}
+	queue_deadline := time.now().add(2 * time.second)
+	for listener.incoming.len < listener.incoming.cap && time.now() < queue_deadline {
+		time.sleep(time.millisecond)
+	}
+	assert listener.incoming.len == listener.incoming.cap
+
+	mut overflow := dial_timeout(listener.addr(), 2 * time.second)!
+	clients << overflow
+	overflow_addr := addr_port_from_string(overflow.local_addr())!
+	overflow_key := '127.0.0.1:${overflow_addr.port}'
+	mut handshake_processed := false
+	handshake_deadline := time.now().add(2 * time.second)
+	for time.now() < handshake_deadline {
+		listener.connections_mutex.lock()
+		mut pending := listener.connections[overflow_key] or {
+			listener.connections_mutex.unlock()
+			handshake_processed = true
+			break
+		}
+		listener.connections_mutex.unlock()
+		if pending.is_connected_confirmed() {
+			handshake_processed = true
+			break
+		}
+		time.sleep(time.millisecond)
+	}
+	assert handshake_processed, 'overflow handshake was not processed'
+
+	client.write('ping'.bytes())!
+	data := server.read_packet() or {
+		assert false, 'full accept backlog stalled an established peer: ${err}'
+		return
+	}
+	assert data.bytestr() == 'ping'
+	server.write('pong'.bytes())!
+	assert client.read_packet()!.bytestr() == 'pong'
+
+	listener.connections_mutex.lock()
+	overflow_retained := overflow_key in listener.connections
+	listener.connections_mutex.unlock()
+	assert !overflow_retained, 'overflow connection must be removed'
+	assert listener.incoming.len == listener.incoming.cap
+	for _ in 0 .. listener.incoming.cap {
+		mut queued := listener.accept_timeout(2 * time.second)!
+		assert !queued.is_closed()
+	}
+
+	mut next := dial_timeout(listener.addr(), 2 * time.second)!
+	clients << next
+	mut accepted := listener.accept_timeout(2 * time.second)!
+	next_addr := addr_port_from_string(next.local_addr())!
+	assert accepted.remote_addr() == '127.0.0.1:${next_addr.port}'
 }
 
 fn test_slow_connection_does_not_stall_listener() {

@@ -70,7 +70,7 @@ fn (mut c Conn) handle_new_incoming_connection(data []u8) ! {
 	if c.mark_connected_once() {
 		c.connected <- true or {}
 		if c.listener != unsafe { nil } {
-			c.listener.queue_incoming(c)
+			c.listener.queue_incoming(c)!
 		}
 	}
 }

@@ -22,6 +22,11 @@ n := conn.read(mut buf)!
 conn.write(buf[..n])!
 ```
 
+The listener queues up to 32 completed connections waiting for `accept()`.
+When that queue is full, additional completed connections are closed on the
+server so existing peers can continue exchanging packets. Call `accept()`
+regularly to drain the queue.
+
 ## Basic Client
 
 ```v

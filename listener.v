@@ -101,7 +101,8 @@ pub fn (l &Listener) accept_timeout(timeout time.Duration) !&Conn {
 	mut conn := unsafe { nil }
 	mut timed_out := false
 	open := select {
-		conn = <-l.incoming {}
+		conn = <-l.incoming {
+		}
 		1 * timeout {
 			timed_out = true
 		}
@@ -340,11 +341,22 @@ fn (mut l Listener) cleanup_pending_handshake(key string, mut conn Conn) {
 	conn.close_immediately()
 }
 
-fn (mut l Listener) queue_incoming(conn &Conn) {
-	if l.is_closed() {
-		return
+fn (mut l Listener) queue_incoming(conn &Conn) ! {
+	l.lifecycle_mutex.lock()
+	defer {
+		l.lifecycle_mutex.unlock()
 	}
-	l.incoming <- conn or {}
+	if l.closed {
+		return err_listener_closed
+	}
+	// The shared UDP receive loop must not wait for the application to accept.
+	select {
+		l.incoming <- conn {
+		}
+		else {
+			return error('accept backlog full')
+		}
+	}
 }
 
 fn (mut l Listener) cookie(addr net.Addr) u32 {
