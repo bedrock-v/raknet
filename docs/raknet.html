@@ -36,7 +36,7 @@
 						<div class="info">
 							<div class="module">raknet</div>
 							<div class="toggle-version-container">
-								<span>0.4.0-alpha1 c8a0764</span>
+								<span>0.4.0-alpha2 22b2369</span>
 								<div
 									id="dark-mode-toggle"
 									role="switch"
@@ -59,14 +59,85 @@
 				<nav class="search hidden"></nav>
 				<nav class="content hidden">
 					<ul>
-						<li class="open active">
-<div class="menu-row"><a href="./raknet.html">raknet</a></div>
+						<li class="open"><a href="#Constants">Constants</a></li>
+<li class="open"><a href="#dial">fn dial</a>        <ul>
+</ul>
 </li>
-<li class="open">
-<div class="menu-row"><a href="./main.html">main</a></div>
+<li class="open"><a href="#dial_timeout">fn dial_timeout</a>        <ul>
+</ul>
 </li>
-<li class="open">
-<div class="menu-row"><a href="./message.html">message</a></div>
+<li class="open"><a href="#listen">fn listen</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#load_uint24">fn load_uint24</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#ping">fn ping</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#ping_timeout">fn ping_timeout</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#safe_load_uint24">fn safe_load_uint24</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#write_uint24">fn write_uint24</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#LogFunc">type LogFunc</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#PongDataFunc">type PongDataFunc</a>        <ul>
+</ul>
+</li>
+<li class="open"><a href="#Uint24">type Uint24</a>        <ul>
+<li><a href="#Uint24.inc">fn inc</a></li>
+</ul>
+</li>
+<li class="open"><a href="#Conn">struct Conn</a>        <ul>
+<li><a href="#Conn.remote_addr">fn remote_addr</a></li>
+<li><a href="#Conn.local_addr">fn local_addr</a></li>
+<li><a href="#Conn.latency">fn latency</a></li>
+<li><a href="#Conn.set_read_deadline">fn set_read_deadline</a></li>
+<li><a href="#Conn.set_write_deadline">fn set_write_deadline</a></li>
+<li><a href="#Conn.set_deadline">fn set_deadline</a></li>
+<li><a href="#Conn.set_read_timeout">fn set_read_timeout</a></li>
+<li><a href="#Conn.set_write_timeout">fn set_write_timeout</a></li>
+<li><a href="#Conn.set_idle_timeout">fn set_idle_timeout</a></li>
+<li><a href="#Conn.set_keepalive_interval">fn set_keepalive_interval</a></li>
+<li><a href="#Conn.write">fn write</a></li>
+<li><a href="#Conn.write_reliable_ordered">fn write_reliable_ordered</a></li>
+<li><a href="#Conn.write_reliable">fn write_reliable</a></li>
+<li><a href="#Conn.write_unreliable">fn write_unreliable</a></li>
+<li><a href="#Conn.write_unreliable_sequenced">fn write_unreliable_sequenced</a></li>
+<li><a href="#Conn.write_reliable_sequenced">fn write_reliable_sequenced</a></li>
+<li><a href="#Conn.read">fn read</a></li>
+<li><a href="#Conn.read_packet">fn read_packet</a></li>
+<li><a href="#Conn.close">fn close</a></li>
+</ul>
+</li>
+<li class="open"><a href="#Dialer">struct Dialer</a>        <ul>
+<li><a href="#Dialer.ping">fn ping</a></li>
+<li><a href="#Dialer.ping_timeout">fn ping_timeout</a></li>
+<li><a href="#Dialer.dial">fn dial</a></li>
+</ul>
+</li>
+<li class="open"><a href="#ListenConfig">struct ListenConfig</a>        <ul>
+<li><a href="#ListenConfig.listen">fn listen</a></li>
+</ul>
+</li>
+<li class="open"><a href="#Listener">struct Listener</a>        <ul>
+<li><a href="#Listener.addr">fn addr</a></li>
+<li><a href="#Listener.accept">fn accept</a></li>
+<li><a href="#Listener.accept_timeout">fn accept_timeout</a></li>
+<li><a href="#Listener.close">fn close</a></li>
+<li><a href="#Listener.set_pong_data">fn set_pong_data</a></li>
+<li><a href="#Listener.set_pong_data_func">fn set_pong_data_func</a></li>
+<li><a href="#Listener.clear_pong_data_func">fn clear_pong_data_func</a></li>
+<li><a href="#Listener.block">fn block</a></li>
+<li><a href="#Listener.block_for">fn block_for</a></li>
+<li><a href="#Listener.captured_packets">fn captured_packets</a></li>
+</ul>
 </li>
 
 					</ul>
@@ -75,69 +146,9 @@
 			<div class="doc-scrollview" tabindex="-1" id="main-content">
 				<div class="doc-container">
 					<div class="doc-content">
-								<section id="readme_raknet" class="doc-node">
-			<div class="title"><h1> raknet <a href="#readme_raknet">#</a></h1></div>
-<h1 id="raknet">raknet</h1>
-<p><code>raknet</code> is a RakNet implementation for V, focused on the classic RakNet protocol used by Minecraft: Bedrock Edition.</p>
-<p>The API is plain-structed and inspired by Sandertv's <code>go-raknet</code>.</p>
-<h2 id="basic-server">Basic Server</h2>
-<pre><code class="language-v"><span class="token keyword">import</span> raknet
+								<section id="raknet" class="doc-node">
+			<div class="title"><h1> raknet</h1></div>
 
-<span class="token keyword">mut</span> listener <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token function">listen</span><span class="token punctuation">(</span><span class="token string">'0.0.0.0:19132'</span><span class="token punctuation">)</span><span class="token operator">!</span>
-<span class="token keyword">defer</span> <span class="token punctuation">{</span>
-    listener<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">or</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
-<span class="token punctuation">}</span>
-
-listener<span class="token punctuation">.</span><span class="token function">set_pong_data</span><span class="token punctuation">(</span><span class="token string">'raknet server'</span><span class="token punctuation">.</span><span class="token function">bytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">!</span>
-
-<span class="token keyword">mut</span> conn <span class="token operator">:=</span> listener<span class="token punctuation">.</span><span class="token function">accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">!</span>
-<span class="token keyword">mut</span> buf <span class="token operator">:=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">{</span>len<span class="token punctuation">:</span> <span class="token number">4096</span><span class="token punctuation">}</span>
-n <span class="token operator">:=</span> conn<span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span><span class="token keyword">mut</span> buf<span class="token punctuation">)</span><span class="token operator">!</span>
-conn<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span>buf<span class="token punctuation">[</span><span class="token punctuation">..</span>n<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token operator">!</span></code></pre>
-<h2 id="basic-client">Basic Client</h2>
-<pre><code class="language-v"><span class="token keyword">import</span> raknet
-
-<span class="token keyword">mut</span> conn <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token function">dial</span><span class="token punctuation">(</span><span class="token string">'127.0.0.1:19132'</span><span class="token punctuation">)</span><span class="token operator">!</span>
-<span class="token keyword">defer</span> <span class="token punctuation">{</span>
-    conn<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">or</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
-<span class="token punctuation">}</span>
-
-conn<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token string">'ping'</span><span class="token punctuation">.</span><span class="token function">bytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">!</span>
-packet <span class="token operator">:=</span> conn<span class="token punctuation">.</span><span class="token function">read_packet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">!</span>
-<span class="token function">println</span><span class="token punctuation">(</span>packet<span class="token punctuation">.</span><span class="token function">bytestr</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span></code></pre>
-<h2 id="basic-ping">Basic Ping</h2>
-<pre><code class="language-v"><span class="token keyword">import</span> raknet
-
-data <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token function">ping</span><span class="token punctuation">(</span><span class="token string">'127.0.0.1:19132'</span><span class="token punctuation">)</span><span class="token operator">!</span>
-<span class="token function">println</span><span class="token punctuation">(</span>data<span class="token punctuation">.</span><span class="token function">bytestr</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span></code></pre>
-<p>IPv6 addresses use bracket notation:</p>
-<pre><code class="language-v"><span class="token keyword">mut</span> conn <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token function">dial</span><span class="token punctuation">(</span><span class="token string">'[::1]:19133'</span><span class="token punctuation">)</span><span class="token operator">!</span></code></pre>
-<h2 id="configuration">Configuration</h2>
-<pre><code class="language-v"><span class="token keyword">import</span> time
-<span class="token keyword">import</span> raknet
-
-<span class="token keyword">mut</span> listener <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token symbol">ListenConfig</span><span class="token punctuation">{</span>
-    max_mtu<span class="token punctuation">:</span> <span class="token number">1200</span>
-    disable_cookies<span class="token punctuation">:</span> <span class="token boolean">false</span>
-    handshake_timeout<span class="token punctuation">:</span> <span class="token number">10</span> <span class="token operator">*</span> time<span class="token punctuation">.</span>second
-<span class="token punctuation">}</span><span class="token punctuation">.</span><span class="token function">listen</span><span class="token punctuation">(</span><span class="token string">'0.0.0.0:19132'</span><span class="token punctuation">)</span><span class="token operator">!</span>
-
-dialer <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token symbol">Dialer</span><span class="token punctuation">{</span>
-    max_mtu<span class="token punctuation">:</span> <span class="token number">1200</span>
-    timeout<span class="token punctuation">:</span> <span class="token number">2</span> <span class="token operator">*</span> time<span class="token punctuation">.</span>second
-<span class="token punctuation">}</span>
-<span class="token keyword">mut</span> conn <span class="token operator">:=</span> dialer<span class="token punctuation">.</span><span class="token function">dial</span><span class="token punctuation">(</span>listener<span class="token punctuation">.</span><span class="token function">addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">!</span></code></pre>
-<h2 id="logging">Logging</h2>
-<p><code>ListenConfig</code> and <code>Dialer</code> both accept an optional <code>error_log</code> hook for diagnostic events (blocked reads, transient UDP errors, close-drain progress...) that would otherwise be silently dropped:</p>
-<pre><code class="language-v"><span class="token keyword">fn</span> <span class="token function">on_event</span><span class="token punctuation">(</span>msg <span class="token builtin">string</span><span class="token punctuation">,</span> fields <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-    <span class="token function">eprintln</span><span class="token punctuation">(</span><span class="token string">&#39;</span><span class="token string_interp">$</span>{msg}<span class="token string">: </span><span class="token string_interp">$</span>{fields}<span class="token string">&#39;</span><span class="token punctuation">)</span>
-<span class="token punctuation">}</span>
-
-<span class="token keyword">mut</span> listener <span class="token operator">:=</span> raknet<span class="token punctuation">.</span><span class="token symbol">ListenConfig</span><span class="token punctuation">{</span>
-    error_log<span class="token punctuation">:</span> on_event
-<span class="token punctuation">}</span><span class="token punctuation">.</span><span class="token function">listen</span><span class="token punctuation">(</span><span class="token string">'0.0.0.0:19132'</span><span class="token punctuation">)</span><span class="token operator">!</span></code></pre>
-<h2 id="tests">Tests</h2>
-<pre><code class="language-sh">v test <span class="token punctuation">.</span></code></pre>
 
 </section>
 
@@ -170,63 +181,63 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_connection_closed <span class="token operator">=</span> 1<span class="token number">10001</span></code></pre>
+<code><span class="token keyword">const</span> err_code_connection_closed <span class="token operator">=</span> <span class="token number">10_001</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_listener_closed <span class="token operator">=</span> 1<span class="token number">10002</span></code></pre>
+<code><span class="token keyword">const</span> err_code_listener_closed <span class="token operator">=</span> <span class="token number">10_002</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_read_deadline_exceeded <span class="token operator">=</span> 1<span class="token number">10003</span></code></pre>
+<code><span class="token keyword">const</span> err_code_read_deadline_exceeded <span class="token operator">=</span> <span class="token number">10_003</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_write_deadline_exceeded <span class="token operator">=</span> 1<span class="token number">10004</span></code></pre>
+<code><span class="token keyword">const</span> err_code_write_deadline_exceeded <span class="token operator">=</span> <span class="token number">10_004</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_connection_timed_out <span class="token operator">=</span> 1<span class="token number">10005</span></code></pre>
+<code><span class="token keyword">const</span> err_code_connection_timed_out <span class="token operator">=</span> <span class="token number">10_005</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_not_supported <span class="token operator">=</span> 1<span class="token number">10006</span></code></pre>
+<code><span class="token keyword">const</span> err_code_not_supported <span class="token operator">=</span> <span class="token number">10_006</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_protocol_mismatch <span class="token operator">=</span> 1<span class="token number">10007</span></code></pre>
+<code><span class="token keyword">const</span> err_code_protocol_mismatch <span class="token operator">=</span> <span class="token number">10_007</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_invalid_packet <span class="token operator">=</span> 1<span class="token number">10008</span></code></pre>
+<code><span class="token keyword">const</span> err_code_invalid_packet <span class="token operator">=</span> <span class="token number">10_008</span></code></pre>
 
 
 </section>
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_code_pong_data_too_large <span class="token operator">=</span> 1<span class="token number">10009</span></code></pre>
+<code><span class="token keyword">const</span> err_code_pong_data_too_large <span class="token operator">=</span> <span class="token number">10_009</span></code></pre>
 
 
 </section>
@@ -285,7 +296,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 
 		<section id="" class="doc-node const">
 <pre class="signature">
-<code><span class="token keyword">const</span> err_pong_data_too_large <span class="token operator">=</span> <span class="token function">error_with_code</span><span class="token punctuation">(</span><span class="token string">&#39;pong data must be no longer than </span><span class="token string_interp">$</span>{max_i16}<span class="token string"> bytes&#39;</span><span class="token punctuation">,</span>
+<code><span class="token keyword">const</span> err_pong_data_too_large <span class="token operator">=</span> <span class="token function">error_with_code</span><span class="token punctuation">(</span><span class="token string">'pong data must be no longer than </span><span class="token string_interp">$</span><span class="token string_interp">{</span>max_i16<span class="token string_interp">}</span><span class="token string"> bytes'</span><span class="token punctuation">,</span>
 	err_code_pong_data_too_large<span class="token punctuation">)</span></code></pre>
 
 
@@ -294,7 +305,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="dial" class="doc-node">
 			<div class="title"><h2>fn dial <a href="#dial">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">dial</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Conn</code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">dial</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Conn</span></code></pre>
 
 
 </section>
@@ -302,7 +313,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="dial_timeout" class="doc-node">
 			<div class="title"><h2>fn dial_timeout <a href="#dial_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">dial_timeout</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">,</span> timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Conn</code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">dial_timeout</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">,</span> timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Conn</span></code></pre>
 
 
 </section>
@@ -310,7 +321,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="listen" class="doc-node">
 			<div class="title"><h2>fn listen <a href="#listen">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">listen</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Listener</code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">listen</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Listener</span></code></pre>
 
 
 </section>
@@ -318,7 +329,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="load_uint24" class="doc-node">
 			<div class="title"><h2>fn load_uint24 <a href="#load_uint24">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">load_uint24</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> Uint24</code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">load_uint24</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token type_name">Uint24</span></code></pre>
 
 
 </section>
@@ -334,7 +345,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="ping_timeout" class="doc-node">
 			<div class="title"><h2>fn ping_timeout <a href="#ping_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">ping_timeout</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">,</span> timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">ping_timeout</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">,</span> timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
 
 
 </section>
@@ -342,7 +353,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="safe_load_uint24" class="doc-node">
 			<div class="title"><h2>fn safe_load_uint24 <a href="#safe_load_uint24">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">safe_load_uint24</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span>Uint24</code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">safe_load_uint24</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token type_name">Uint24</span></code></pre>
 
 
 </section>
@@ -350,15 +361,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="write_uint24" class="doc-node">
 			<div class="title"><h2>fn write_uint24 <a href="#write_uint24">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token function">write_uint24</span><span class="token punctuation">(</span><span class="token keyword">mut</span> b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">,</span> v Uint24<span class="token punctuation">)</span></code></pre>
-
-
-</section>
-
-		<section id="Reliability.from" class="doc-node">
-			<div class="title"><h2>fn Reliability.from <a href="#Reliability.from">#</a></h2></div>
-<pre class="signature">
-<code><span class="token keyword">fn</span> Reliability<span class="token punctuation">.</span>from<span class="token punctuation">[</span><span class="token builtin">W</span><span class="token punctuation">]</span><span class="token punctuation">(</span>input <span class="token builtin">W</span><span class="token punctuation">)</span> <span class="token operator">!</span>Reliability</code></pre>
+<code><span class="token keyword">fn</span> <span class="token function">write_uint24</span><span class="token punctuation">(</span><span class="token keyword">mut</span> b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">,</span> v <span class="token type_name">Uint24</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -366,7 +369,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="LogFunc" class="doc-node">
 			<div class="title"><h2>type LogFunc <a href="#LogFunc">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">type</span> LogFunc <span class="token operator">=</span> <span class="token keyword">fn</span> <span class="token punctuation">(</span>msg <span class="token builtin">string</span><span class="token punctuation">,</span> fields <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">type</span> <span class="token type_name">LogFunc</span> <span class="token operator">=</span> <span class="token keyword">fn</span> <span class="token punctuation">(</span>msg <span class="token builtin">string</span><span class="token punctuation">,</span> fields <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">)</span></code></pre>
 <p>LogFunc is an optional diagnostic hook. msg is a short, stable event name (e.g. "read from", "blocked read", "transient udp error", "close drain timeout") and fields carries event-specific context such as the remote address or underlying error.</p>
 
 </section>
@@ -374,7 +377,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="PongDataFunc" class="doc-node">
 			<div class="title"><h2>type PongDataFunc <a href="#PongDataFunc">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">type</span> PongDataFunc <span class="token operator">=</span> <span class="token keyword">fn</span> <span class="token punctuation">(</span>net<span class="token punctuation">.</span>Addr<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
+<code><span class="token keyword">type</span> <span class="token type_name">PongDataFunc</span> <span class="token operator">=</span> <span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token module_">net</span><span class="token punctuation">.</span><span class="token type_name">Addr</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
 
 
 </section>
@@ -382,7 +385,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Uint24" class="doc-node">
 			<div class="title"><h2>type Uint24 <a href="#Uint24">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">type</span> Uint24 <span class="token operator">=</span> <span class="token builtin">u32</span></code></pre>
+<code><span class="token keyword">type</span> <span class="token type_name">Uint24</span> <span class="token operator">=</span> <span class="token builtin">u32</span></code></pre>
 
 
 </section>
@@ -390,7 +393,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Uint24.inc" class="doc-node">
 			<div class="title"><h2>fn (Uint24) inc <a href="#Uint24.inc">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> u Uint24<span class="token punctuation">)</span> <span class="token function">inc</span><span class="token punctuation">(</span><span class="token punctuation">)</span> Uint24</code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> u <span class="token type_name">Uint24</span><span class="token punctuation">)</span> <span class="token function">inc</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token type_name">Uint24</span></code></pre>
 <p>In V, a mutable receiver for an alias type behaves pointer-like here, so copy the underlying value explicitly before incrementing.</p>
 
 </section>
@@ -399,45 +402,48 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 			<div class="title"><h2>struct Conn <a href="#Conn">#</a></h2></div>
 <div class="attributes"><div class="attribute">@[heap]</div></div>
 <pre class="signature">
-<code><span class="token keyword">struct</span> <span class="token symbol">Conn</span> <span class="token punctuation">{</span>
+<code><span class="token keyword">struct</span> <span class="token type_name">Conn</span> <span class="token punctuation">{</span>
 <span class="token keyword">mut</span><span class="token punctuation">:</span>
-	udp                 <span class="token operator">&amp;</span>net<span class="token punctuation">.</span>UdpConn <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
-	remote              net<span class="token punctuation">.</span>Addr
-	remote_key          <span class="token builtin">string</span>
-	mtu                 <span class="token builtin">u16</span>
-	seq                 Uint24
-	message_idx         Uint24
-	sequence_idx        Uint24
-	order_idx           Uint24
-	split_id            <span class="token builtin">u32</span>
-	packets             PacketChan <span class="token operator">=</span> <span class="token function">new_packet_chan</span><span class="token punctuation">(</span>packet_chan_initial_cap<span class="token punctuation">,</span> packet_chan_max_cap<span class="token punctuation">,</span>
+	udp             <span class="token operator">&amp;</span><span class="token module_">net</span><span class="token punctuation">.</span><span class="token type_name">UdpConn</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	remote          <span class="token module_">net</span><span class="token punctuation">.</span><span class="token type_name">Addr</span>
+	remote_key      <span class="token builtin">string</span>
+	mtu             <span class="token builtin">u16</span>
+	seq             <span class="token type_name">Uint24</span>
+	message_idx     <span class="token type_name">Uint24</span>
+	sequence_idx    <span class="token type_name">Uint24</span>
+	order_idx       <span class="token type_name">Uint24</span>
+	split_id        <span class="token builtin">u32</span>
+	packets         <span class="token type_name">PacketChan</span> <span class="token operator">=</span> <span class="token function">new_packet_chan</span><span class="token punctuation">(</span>packet_chan_initial_cap<span class="token punctuation">,</span> packet_chan_max_cap<span class="token punctuation">,</span>
 		packet_chan_max_bytes<span class="token punctuation">)</span>
-	connected           <span class="token builtin">chan</span> <span class="token builtin">bool</span>
-	splits              <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">u16</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span>
-	resend              ResendMap
-	win                 DatagramWindow
-	packet_queue        PacketQueue
-	pending_ack         <span class="token punctuation">[</span><span class="token punctuation">]</span>Uint24
-	pending_nack        <span class="token punctuation">[</span><span class="token punctuation">]</span>Uint24
+	connected       <span class="token builtin">chan</span> <span class="token builtin">bool</span>
+	splits          <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">u16</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span>
+	resend          <span class="token type_name">ResendMap</span>
+	win             <span class="token type_name">DatagramWindow</span>
+	reliable_window <span class="token type_name">ReliableWindow</span>
+	<span class="token comment">// Explicit initialization is needed for nested maps in constant-sized arrays on V 22b2369.</span>
+	packet_queues       <span class="token punctuation">[</span>ordering_channels<span class="token punctuation">]</span><span class="token type_name">PacketQueue</span> <span class="token operator">=</span> <span class="token punctuation">[</span>ordering_channels<span class="token punctuation">]</span><span class="token type_name">PacketQueue</span><span class="token punctuation">{</span>init<span class="token punctuation">:</span> <span class="token type_name">PacketQueue</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+	queued_packet_bytes <span class="token builtin">int</span>
+	pending_ack         <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token type_name">Uint24</span>
+	pending_nack        <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token type_name">Uint24</span>
 	sent_raw            <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span>
-	rtt                 time<span class="token punctuation">.</span>Duration
-	last_activity       time<span class="token punctuation">.</span>Time
-	idle_timeout        time<span class="token punctuation">.</span>Duration
-	keepalive_interval  time<span class="token punctuation">.</span>Duration
-	read_deadline       time<span class="token punctuation">.</span>Time
-	write_deadline      time<span class="token punctuation">.</span>Time
-	read_timeout        time<span class="token punctuation">.</span>Duration
+	rtt                 <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
+	last_activity       <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span>
+	idle_timeout        <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
+	keepalive_interval  <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
+	read_deadline       <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span>
+	write_deadline      <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span>
+	read_timeout        <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
 	is_server           <span class="token builtin">bool</span>
-	listener            <span class="token operator">&amp;</span>Listener   <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
-	mutex               <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-	ack_mutex           <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-	lifecycle_mutex     <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	listener            <span class="token operator">&amp;</span><span class="token type_name">Listener</span>   <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	mutex               <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	ack_mutex           <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	lifecycle_mutex     <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 	closed_chan         <span class="token builtin">chan</span> <span class="token builtin">bool</span>   <span class="token operator">=</span> <span class="token builtin">chan</span> <span class="token builtin">bool</span><span class="token punctuation">{</span>cap<span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">}</span>
 	connected_confirmed <span class="token builtin">bool</span>
-	closing_deadline    time<span class="token punctuation">.</span>Time
+	closing_deadline    <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span>
 	closing             <span class="token builtin">bool</span>
 	closed              <span class="token builtin">bool</span>
-	error_log           LogFunc <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	error_log           <span class="token type_name">LogFunc</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
 <span class="token punctuation">}</span></code></pre>
 
 
@@ -446,7 +452,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.remote_addr" class="doc-node">
 			<div class="title"><h2>fn (Conn) remote_addr <a href="#Conn.remote_addr">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">remote_addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">remote_addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span></code></pre>
 
 
 </section>
@@ -454,7 +460,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.local_addr" class="doc-node">
 			<div class="title"><h2>fn (Conn) local_addr <a href="#Conn.local_addr">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">local_addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">local_addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span></code></pre>
 
 
 </section>
@@ -462,7 +468,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.latency" class="doc-node">
 			<div class="title"><h2>fn (Conn) latency <a href="#Conn.latency">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">latency</span><span class="token punctuation">(</span><span class="token punctuation">)</span> time<span class="token punctuation">.</span>Duration</code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">latency</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span></code></pre>
 
 
 </section>
@@ -470,7 +476,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_read_deadline" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_read_deadline <a href="#Conn.set_read_deadline">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_read_deadline</span><span class="token punctuation">(</span>deadline time<span class="token punctuation">.</span>Time<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_read_deadline</span><span class="token punctuation">(</span>deadline <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -478,7 +484,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_write_deadline" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_write_deadline <a href="#Conn.set_write_deadline">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_write_deadline</span><span class="token punctuation">(</span>deadline time<span class="token punctuation">.</span>Time<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_write_deadline</span><span class="token punctuation">(</span>deadline <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -486,7 +492,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_deadline" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_deadline <a href="#Conn.set_deadline">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_deadline</span><span class="token punctuation">(</span>deadline time<span class="token punctuation">.</span>Time<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_deadline</span><span class="token punctuation">(</span>deadline <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -494,7 +500,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_read_timeout" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_read_timeout <a href="#Conn.set_read_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_read_timeout</span><span class="token punctuation">(</span>timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_read_timeout</span><span class="token punctuation">(</span>timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -502,7 +508,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_write_timeout" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_write_timeout <a href="#Conn.set_write_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_write_timeout</span><span class="token punctuation">(</span>timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_write_timeout</span><span class="token punctuation">(</span>timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -510,7 +516,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_idle_timeout" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_idle_timeout <a href="#Conn.set_idle_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_idle_timeout</span><span class="token punctuation">(</span>timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_idle_timeout</span><span class="token punctuation">(</span>timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -518,7 +524,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.set_keepalive_interval" class="doc-node">
 			<div class="title"><h2>fn (Conn) set_keepalive_interval <a href="#Conn.set_keepalive_interval">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">set_keepalive_interval</span><span class="token punctuation">(</span>interval time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">set_keepalive_interval</span><span class="token punctuation">(</span>interval <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -526,7 +532,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.write" class="doc-node">
 			<div class="title"><h2>fn (Conn) write <a href="#Conn.write">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">write</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">write</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -534,7 +540,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.write_reliable_ordered" class="doc-node">
 			<div class="title"><h2>fn (Conn) write_reliable_ordered <a href="#Conn.write_reliable_ordered">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">write_reliable_ordered</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">write_reliable_ordered</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -542,7 +548,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.write_reliable" class="doc-node">
 			<div class="title"><h2>fn (Conn) write_reliable <a href="#Conn.write_reliable">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">write_reliable</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">write_reliable</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -550,7 +556,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.write_unreliable" class="doc-node">
 			<div class="title"><h2>fn (Conn) write_unreliable <a href="#Conn.write_unreliable">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">write_unreliable</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">write_unreliable</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -558,7 +564,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.write_unreliable_sequenced" class="doc-node">
 			<div class="title"><h2>fn (Conn) write_unreliable_sequenced <a href="#Conn.write_unreliable_sequenced">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">write_unreliable_sequenced</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">write_unreliable_sequenced</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -566,7 +572,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.write_reliable_sequenced" class="doc-node">
 			<div class="title"><h2>fn (Conn) write_reliable_sequenced <a href="#Conn.write_reliable_sequenced">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">write_reliable_sequenced</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">write_reliable_sequenced</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -574,7 +580,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.read" class="doc-node">
 			<div class="title"><h2>fn (Conn) read <a href="#Conn.read">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">read</span><span class="token punctuation">(</span><span class="token keyword">mut</span> buf <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">read</span><span class="token punctuation">(</span><span class="token keyword">mut</span> buf <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token builtin">int</span></code></pre>
 
 
 </section>
@@ -582,7 +588,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.read_packet" class="doc-node">
 			<div class="title"><h2>fn (Conn) read_packet <a href="#Conn.read_packet">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">read_packet</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">read_packet</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
 
 
 </section>
@@ -590,7 +596,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Conn.close" class="doc-node">
 			<div class="title"><h2>fn (Conn) close <a href="#Conn.close">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c Conn<span class="token punctuation">)</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> c <span class="token type_name">Conn</span><span class="token punctuation">)</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span></code></pre>
 
 
 </section>
@@ -598,12 +604,12 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Dialer" class="doc-node">
 			<div class="title"><h2>struct Dialer <a href="#Dialer">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">struct</span> <span class="token symbol">Dialer</span> <span class="token punctuation">{</span>
+<code><span class="token keyword">struct</span> <span class="token type_name">Dialer</span> <span class="token punctuation">{</span>
 <span class="token keyword">pub</span> <span class="token keyword">mut</span><span class="token punctuation">:</span>
 	max_mtu              <span class="token builtin">u16</span>
-	timeout              time<span class="token punctuation">.</span>Duration
+	timeout              <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
 	max_transient_errors <span class="token builtin">int</span>
-	error_log            LogFunc <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	error_log            <span class="token type_name">LogFunc</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
 <span class="token punctuation">}</span></code></pre>
 
 
@@ -612,7 +618,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Dialer.ping" class="doc-node">
 			<div class="title"><h2>fn (Dialer) ping <a href="#Dialer.ping">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>dialer Dialer<span class="token punctuation">)</span> <span class="token function">ping</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>dialer <span class="token type_name">Dialer</span><span class="token punctuation">)</span> <span class="token function">ping</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
 
 
 </section>
@@ -620,7 +626,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Dialer.ping_timeout" class="doc-node">
 			<div class="title"><h2>fn (Dialer) ping_timeout <a href="#Dialer.ping_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>dialer Dialer<span class="token punctuation">)</span> <span class="token function">ping_timeout</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">,</span> timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>dialer <span class="token type_name">Dialer</span><span class="token punctuation">)</span> <span class="token function">ping_timeout</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">,</span> timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
 
 
 </section>
@@ -628,7 +634,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Dialer.dial" class="doc-node">
 			<div class="title"><h2>fn (Dialer) dial <a href="#Dialer.dial">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>dialer Dialer<span class="token punctuation">)</span> <span class="token function">dial</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Conn</code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>dialer <span class="token type_name">Dialer</span><span class="token punctuation">)</span> <span class="token function">dial</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Conn</span></code></pre>
 
 
 </section>
@@ -636,14 +642,14 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="ListenConfig" class="doc-node">
 			<div class="title"><h2>struct ListenConfig <a href="#ListenConfig">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">struct</span> <span class="token symbol">ListenConfig</span> <span class="token punctuation">{</span>
+<code><span class="token keyword">struct</span> <span class="token type_name">ListenConfig</span> <span class="token punctuation">{</span>
 <span class="token keyword">pub</span> <span class="token keyword">mut</span><span class="token punctuation">:</span>
 	disable_cookies   <span class="token builtin">bool</span>
 	max_mtu           <span class="token builtin">u16</span>
-	block_duration    time<span class="token punctuation">.</span>Duration
+	block_duration    <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
 	capture_packets   <span class="token builtin">bool</span>
-	handshake_timeout time<span class="token punctuation">.</span>Duration
-	error_log         LogFunc <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	handshake_timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
+	error_log         <span class="token type_name">LogFunc</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
 <span class="token punctuation">}</span></code></pre>
 
 
@@ -652,7 +658,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="ListenConfig.listen" class="doc-node">
 			<div class="title"><h2>fn (ListenConfig) listen <a href="#ListenConfig.listen">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>conf ListenConfig<span class="token punctuation">)</span> <span class="token function">listen</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Listener</code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>conf <span class="token type_name">ListenConfig</span><span class="token punctuation">)</span> <span class="token function">listen</span><span class="token punctuation">(</span>address <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Listener</span></code></pre>
 
 
 </section>
@@ -661,30 +667,30 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 			<div class="title"><h2>struct Listener <a href="#Listener">#</a></h2></div>
 <div class="attributes"><div class="attribute">@[heap]</div></div>
 <pre class="signature">
-<code><span class="token keyword">struct</span> <span class="token symbol">Listener</span> <span class="token punctuation">{</span>
+<code><span class="token keyword">struct</span> <span class="token type_name">Listener</span> <span class="token punctuation">{</span>
 <span class="token keyword">mut</span><span class="token punctuation">:</span>
-	udp                  <span class="token operator">&amp;</span>net<span class="token punctuation">.</span>UdpConn <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
-	incoming             <span class="token builtin">chan</span> <span class="token operator">&amp;</span>Conn
-	connections          <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">&amp;</span>Conn
-	connections_mutex    <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	udp                  <span class="token operator">&amp;</span><span class="token module_">net</span><span class="token punctuation">.</span><span class="token type_name">UdpConn</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	incoming             <span class="token builtin">chan</span> <span class="token operator">&amp;</span><span class="token type_name">Conn</span>
+	connections          <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">&amp;</span><span class="token type_name">Conn</span>
+	connections_mutex    <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 	id                   <span class="token builtin">i64</span>
 	closed               <span class="token builtin">bool</span>
-	lifecycle_mutex      <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	lifecycle_mutex      <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 	pong_data            <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span>
-	pong_data_func       PongDataFunc <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
-	pong_data_mutex      <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex  <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	pong_data_func       <span class="token type_name">PongDataFunc</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	pong_data_mutex      <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span>  <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 	max_mtu              <span class="token builtin">u16</span>
 	disable_cookies      <span class="token builtin">bool</span>
 	cookie_salt          <span class="token builtin">u64</span>
 	previous_cookie_salt <span class="token builtin">u64</span>
-	block_duration       time<span class="token punctuation">.</span>Duration
-	blocks               <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span>time<span class="token punctuation">.</span>Time
-	security_mutex       <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	block_duration       <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
+	blocks               <span class="token builtin">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Time</span>
+	security_mutex       <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 	capture_packets      <span class="token builtin">bool</span>
 	captured             <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span>
-	capture_mutex        <span class="token operator">&amp;</span>sync<span class="token punctuation">.</span>Mutex <span class="token operator">=</span> sync<span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-	handshake_timeout    time<span class="token punctuation">.</span>Duration
-	error_log            LogFunc <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
+	capture_mutex        <span class="token operator">&amp;</span><span class="token module_">sync</span><span class="token punctuation">.</span><span class="token type_name">Mutex</span> <span class="token operator">=</span> <span class="token module_">sync</span><span class="token punctuation">.</span><span class="token function">new_mutex</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	handshake_timeout    <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span>
+	error_log            <span class="token type_name">LogFunc</span> <span class="token operator">=</span> <span class="token keyword">unsafe</span> <span class="token punctuation">{</span> <span class="token keyword">nil</span> <span class="token punctuation">}</span>
 <span class="token punctuation">}</span></code></pre>
 
 
@@ -693,7 +699,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.addr" class="doc-node">
 			<div class="title"><h2>fn (Listener) addr <a href="#Listener.addr">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>l <span class="token operator">&amp;</span>Listener<span class="token punctuation">)</span> <span class="token function">addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>l <span class="token operator">&amp;</span><span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">addr</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span></code></pre>
 
 
 </section>
@@ -701,7 +707,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.accept" class="doc-node">
 			<div class="title"><h2>fn (Listener) accept <a href="#Listener.accept">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>l <span class="token operator">&amp;</span>Listener<span class="token punctuation">)</span> <span class="token function">accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Conn</code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>l <span class="token operator">&amp;</span><span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Conn</span></code></pre>
 
 
 </section>
@@ -709,7 +715,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.accept_timeout" class="doc-node">
 			<div class="title"><h2>fn (Listener) accept_timeout <a href="#Listener.accept_timeout">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>l <span class="token operator">&amp;</span>Listener<span class="token punctuation">)</span> <span class="token function">accept_timeout</span><span class="token punctuation">(</span>timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span>Conn</code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span>l <span class="token operator">&amp;</span><span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">accept_timeout</span><span class="token punctuation">(</span>timeout <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span> <span class="token operator">!</span><span class="token operator">&amp;</span><span class="token type_name">Conn</span></code></pre>
 
 
 </section>
@@ -717,7 +723,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.close" class="doc-node">
 			<div class="title"><h2>fn (Listener) close <a href="#Listener.close">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!</span></code></pre>
 
 
 </section>
@@ -725,7 +731,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.set_pong_data" class="doc-node">
 			<div class="title"><h2>fn (Listener) set_pong_data <a href="#Listener.set_pong_data">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">set_pong_data</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">set_pong_data</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span><span class="token punctuation">)</span> <span class="token operator">!</span></code></pre>
 
 
 </section>
@@ -733,7 +739,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.set_pong_data_func" class="doc-node">
 			<div class="title"><h2>fn (Listener) set_pong_data_func <a href="#Listener.set_pong_data_func">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">set_pong_data_func</span><span class="token punctuation">(</span>f PongDataFunc<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">set_pong_data_func</span><span class="token punctuation">(</span>f <span class="token type_name">PongDataFunc</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -741,7 +747,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.clear_pong_data_func" class="doc-node">
 			<div class="title"><h2>fn (Listener) clear_pong_data_func <a href="#Listener.clear_pong_data_func">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">clear_pong_data_func</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">clear_pong_data_func</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -749,7 +755,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.block" class="doc-node">
 			<div class="title"><h2>fn (Listener) block <a href="#Listener.block">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">block</span><span class="token punctuation">(</span>addr net<span class="token punctuation">.</span>Addr<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">block</span><span class="token punctuation">(</span>addr <span class="token module_">net</span><span class="token punctuation">.</span><span class="token type_name">Addr</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -757,7 +763,7 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.block_for" class="doc-node">
 			<div class="title"><h2>fn (Listener) block_for <a href="#Listener.block_for">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">block_for</span><span class="token punctuation">(</span>addr net<span class="token punctuation">.</span>Addr<span class="token punctuation">,</span> duration time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">block_for</span><span class="token punctuation">(</span>addr <span class="token module_">net</span><span class="token punctuation">.</span><span class="token type_name">Addr</span><span class="token punctuation">,</span> duration <span class="token module_">time</span><span class="token punctuation">.</span><span class="token type_name">Duration</span><span class="token punctuation">)</span></code></pre>
 
 
 </section>
@@ -765,99 +771,15 @@ dialer <span class="token operator">:=</span> raknet<span class="token punctuati
 		<section id="Listener.captured_packets" class="doc-node">
 			<div class="title"><h2>fn (Listener) captured_packets <a href="#Listener.captured_packets">#</a></h2></div>
 <pre class="signature">
-<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l Listener<span class="token punctuation">)</span> <span class="token function">captured_packets</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
+<code><span class="token keyword">fn</span> <span class="token punctuation">(</span><span class="token keyword">mut</span> l <span class="token type_name">Listener</span><span class="token punctuation">)</span> <span class="token function">captured_packets</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">u8</span></code></pre>
 
 
 </section>
 
 
-						<div class="footer">Powered by vdoc. Generated on: 13 Jul 2026 23:30:17</div>
+						<div class="footer">Powered by vdoc. Generated on: 21 Oct 2026 23:35:00</div>
 					</div>
-					<div class="doc-toc"><ul><li class="open"><a href="#readme_raknet">README</a></li>
-<li class="open"><a href="#Constants">Constants</a></li>
-<li class="open"><a href="#dial">fn dial</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#dial_timeout">fn dial_timeout</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#listen">fn listen</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#load_uint24">fn load_uint24</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#ping">fn ping</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#ping_timeout">fn ping_timeout</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#safe_load_uint24">fn safe_load_uint24</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#write_uint24">fn write_uint24</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#Reliability.from">fn Reliability.from</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#LogFunc">type LogFunc</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#PongDataFunc">type PongDataFunc</a>        <ul>
-</ul>
-</li>
-<li class="open"><a href="#Uint24">type Uint24</a>        <ul>
-<li><a href="#Uint24.inc">fn inc</a></li>
-</ul>
-</li>
-<li class="open"><a href="#Conn">struct Conn</a>        <ul>
-<li><a href="#Conn.remote_addr">fn remote_addr</a></li>
-<li><a href="#Conn.local_addr">fn local_addr</a></li>
-<li><a href="#Conn.latency">fn latency</a></li>
-<li><a href="#Conn.set_read_deadline">fn set_read_deadline</a></li>
-<li><a href="#Conn.set_write_deadline">fn set_write_deadline</a></li>
-<li><a href="#Conn.set_deadline">fn set_deadline</a></li>
-<li><a href="#Conn.set_read_timeout">fn set_read_timeout</a></li>
-<li><a href="#Conn.set_write_timeout">fn set_write_timeout</a></li>
-<li><a href="#Conn.set_idle_timeout">fn set_idle_timeout</a></li>
-<li><a href="#Conn.set_keepalive_interval">fn set_keepalive_interval</a></li>
-<li><a href="#Conn.write">fn write</a></li>
-<li><a href="#Conn.write_reliable_ordered">fn write_reliable_ordered</a></li>
-<li><a href="#Conn.write_reliable">fn write_reliable</a></li>
-<li><a href="#Conn.write_unreliable">fn write_unreliable</a></li>
-<li><a href="#Conn.write_unreliable_sequenced">fn write_unreliable_sequenced</a></li>
-<li><a href="#Conn.write_reliable_sequenced">fn write_reliable_sequenced</a></li>
-<li><a href="#Conn.read">fn read</a></li>
-<li><a href="#Conn.read_packet">fn read_packet</a></li>
-<li><a href="#Conn.close">fn close</a></li>
-</ul>
-</li>
-<li class="open"><a href="#Dialer">struct Dialer</a>        <ul>
-<li><a href="#Dialer.ping">fn ping</a></li>
-<li><a href="#Dialer.ping_timeout">fn ping_timeout</a></li>
-<li><a href="#Dialer.dial">fn dial</a></li>
-</ul>
-</li>
-<li class="open"><a href="#ListenConfig">struct ListenConfig</a>        <ul>
-<li><a href="#ListenConfig.listen">fn listen</a></li>
-</ul>
-</li>
-<li class="open"><a href="#Listener">struct Listener</a>        <ul>
-<li><a href="#Listener.addr">fn addr</a></li>
-<li><a href="#Listener.accept">fn accept</a></li>
-<li><a href="#Listener.accept_timeout">fn accept_timeout</a></li>
-<li><a href="#Listener.close">fn close</a></li>
-<li><a href="#Listener.set_pong_data">fn set_pong_data</a></li>
-<li><a href="#Listener.set_pong_data_func">fn set_pong_data_func</a></li>
-<li><a href="#Listener.clear_pong_data_func">fn clear_pong_data_func</a></li>
-<li><a href="#Listener.block">fn block</a></li>
-<li><a href="#Listener.block_for">fn block_for</a></li>
-<li><a href="#Listener.captured_packets">fn captured_packets</a></li>
-</ul>
-</li>
-</ul></div>
+					
 				</div>
 			</div>
 		</div>
