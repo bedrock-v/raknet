@@ -198,8 +198,7 @@ fn test_split_payload_over_small_mtu() {
 
 fn test_conn_delivers_reliable_ordered_packets_in_order() {
 	mut conn := &Conn{
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		packet_queue: new_packet_queue()
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 	}
 	conn.receive_packet(Packet{
 		reliability: .reliable_ordered
@@ -224,11 +223,10 @@ fn test_conn_delivers_reliable_ordered_packets_in_order() {
 
 fn test_conn_drops_duplicate_datagrams() {
 	mut conn := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 	pk := Packet{
 		reliability: .reliable_ordered
@@ -411,15 +409,14 @@ fn test_dial_timeout_public_wrapper_connects() {
 
 fn mtu_probe_fake_server(mut udp net.UdpConn, probes chan u16, done chan bool) {
 	mut conn := &Conn{
-		udp:          unsafe { &udp }
-		mtu:          1200
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		connected:    chan bool{cap: 1}
-		splits:       map[u16][][]u8{}
-		resend:       new_resend_map()
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		is_server:    true
+		udp:       unsafe { &udp }
+		mtu:       1200
+		packets:   new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
+		connected: chan bool{cap: 1}
+		splits:    map[u16][][]u8{}
+		resend:    new_resend_map()
+		win:       new_datagram_window()
+		is_server: true
 	}
 	mut buf := []u8{len: 1600}
 	mut client_addr := net.Addr{}
@@ -527,9 +524,10 @@ fn test_dialer_probes_next_mtu_when_largest_probe_gets_no_reply() {
 
 fn make_reliable_datagram(seq Uint24, order Uint24, content []u8) []u8 {
 	pk := Packet{
-		reliability: .reliable_ordered
-		order_index: order
-		content:     content
+		reliability:   .reliable_ordered
+		message_index: order
+		order_index:   order
+		content:       content
 	}
 	mut datagram := []u8{}
 	datagram << (bit_flag_datagram | bit_flag_needs_b_and_as)
@@ -540,11 +538,10 @@ fn make_reliable_datagram(seq Uint24, order Uint24, content []u8) []u8 {
 
 fn test_conn_batches_acknowledgements_until_flush() {
 	mut conn := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 	conn.receive(make_reliable_datagram(Uint24(0), Uint24(0), [u8(0xaa)]))!
 	conn.receive(make_reliable_datagram(Uint24(1), Uint24(1), [u8(0xbb)]))!
@@ -612,11 +609,10 @@ fn test_conn_recovers_from_dropped_datagram_with_nack() {
 	assert sender.sent_raw.len == 3
 
 	mut receiver := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 	receiver.receive(sender.sent_raw[0])!
 	assert (<-receiver.packets.ch) == [u8(1)]
@@ -728,11 +724,10 @@ fn test_conn_close_finishes_after_drain_timeout() {
 
 fn test_conn_receive_after_close_is_noop() {
 	mut conn := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(1, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 	conn.close()!
 	conn.sent_raw.clear()
@@ -758,7 +753,6 @@ fn test_conn_reassembles_split_payload_directly() {
 		mtu:           max_mtu_size
 		packets:       new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 		win:           new_datagram_window()
-		packet_queue:  new_packet_queue()
 		resend:        new_resend_map()
 		last_activity: time.now()
 		idle_timeout:  5 * time.second
@@ -871,8 +865,7 @@ fn test_conn_public_addresses_and_latency_defaults() {
 
 fn test_conn_rejects_packet_queue_window_over_limit() {
 	mut conn := &Conn{
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		packet_queue: new_packet_queue()
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
 	}
 	conn.receive_packet(Packet{
 		reliability: .reliable_ordered
@@ -887,8 +880,7 @@ fn test_conn_rejects_packet_queue_window_over_limit() {
 
 fn test_conn_rejects_too_many_concurrent_splits() {
 	mut conn := &Conn{
-		packet_queue: new_packet_queue()
-		splits:       map[u16][][]u8{}
+		splits: map[u16][][]u8{}
 	}
 	for i in 0 .. 17 {
 		conn.splits[u16(i)] = [][]u8{len: 2}

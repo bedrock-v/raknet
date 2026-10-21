@@ -7,6 +7,7 @@ const bit_flag_ack = u8(0x40)
 const bit_flag_nack = u8(0x20)
 const bit_flag_needs_b_and_as = u8(0x04)
 const split_flag = u8(0x10)
+const ordering_channels = 32
 
 enum Reliability {
 	unreliable
@@ -34,6 +35,7 @@ mut:
 	message_index  Uint24
 	sequence_index Uint24
 	order_index    Uint24
+	order_channel  u8
 	content        []u8
 	split          bool
 	split_count    u32
@@ -47,6 +49,7 @@ fn (pk Packet) clone() Packet {
 		message_index:  pk.message_index
 		sequence_index: pk.sequence_index
 		order_index:    pk.order_index
+		order_channel:  pk.order_channel
 		content:        pk.content.clone()
 		split:          pk.split
 		split_count:    pk.split_count
@@ -72,7 +75,7 @@ fn (pk Packet) write(mut out []u8) {
 	}
 	if pk.reliability.sequenced_or_ordered() {
 		write_uint24(mut out, pk.order_index)
-		out << u8(0)
+		out << pk.order_channel
 	}
 	if pk.split {
 		mut split_buf := []u8{len: 10}
@@ -119,6 +122,10 @@ fn (mut pk Packet) read(b []u8) !int {
 			return error('unexpected eof reading packet order index')
 		}
 		pk.order_index = safe_load_uint24(b[offset..])!
+		pk.order_channel = b[offset + 3]
+		if pk.order_channel >= ordering_channels {
+			return error('invalid ordering channel')
+		}
 		offset += 4
 	}
 	if pk.split {

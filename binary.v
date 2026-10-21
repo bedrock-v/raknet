@@ -2,6 +2,17 @@ module raknet
 
 pub type Uint24 = u32
 
+const uint24_mask = u32(0x00ffffff)
+const uint24_half_range = u32(0x00800000)
+
+fn uint24_distance(index Uint24, base Uint24) u32 {
+	return (u32(index) - u32(base)) & uint24_mask
+}
+
+fn uint24_next(index Uint24) Uint24 {
+	return Uint24((u32(index) + 1) & uint24_mask)
+}
+
 // In V, a mutable receiver for an alias type behaves pointer-like here,
 // so copy the underlying value explicitly before incrementing.
 pub fn (mut u Uint24) inc() Uint24 {

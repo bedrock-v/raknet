@@ -139,5 +139,33 @@ fn test_reliability_indexes() {
 	assert reliable_sequenced.reliability == .reliable_sequenced
 	assert reliable_sequenced.message_index == Uint24(2)
 	assert reliable_sequenced.sequence_index == Uint24(1)
-	assert reliable_sequenced.order_index == Uint24(2)
+	assert reliable_sequenced.order_index == Uint24(1)
+
+	conn.write_reliable_ordered([u8(0xf0)])!
+	conn.write_unreliable_sequenced([u8(0xf1)])!
+	mut next_ordered := Packet{}
+	next_ordered.read(conn.sent_raw[5][4..])!
+	assert next_ordered.order_index == Uint24(1)
+	mut next_sequenced := Packet{}
+	next_sequenced.read(conn.sent_raw[6][4..])!
+	assert next_sequenced.order_index == Uint24(2)
+	assert next_sequenced.sequence_index == Uint24(0)
+}
+
+fn test_ordering_channel_roundtrip_and_validation() {
+	for channel in [u8(0), 31, 32, 255] {
+		mut out := []u8{}
+		Packet{
+			reliability:   .reliable_sequenced
+			order_channel: channel
+			content:       [u8(0xaa)]
+		}.write(mut out)
+		mut decoded := Packet{}
+		decoded.read(out) or {
+			assert channel >= 32
+			continue
+		}
+		assert channel < 32
+		assert decoded.order_channel == channel
+	}
 }

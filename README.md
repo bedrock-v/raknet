@@ -92,6 +92,17 @@ mut listener := raknet.ListenConfig{
 }.listen('0.0.0.0:19132')!
 ```
 
+## Receive reliability
+
+Reliable receive deduplicates retransmitted messages and fragments. Ordered and
+sequenced delivery track each of the 32 ordering channels independently; the
+write methods send on channel 0. Sequenced packets wait for missing ordered
+packets in the same channel, and stale sequences are discarded.
+
+Receive windows allow up to 2,048 outstanding indices. Ordering buffers hold at
+most 2,048 future packets per channel and 32 MiB of payloads per connection.
+Exceeding these limits closes the connection.
+
 ## Tests
 
 ```sh
