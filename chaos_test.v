@@ -17,11 +17,10 @@ fn test_packet_loss_recovery_via_resend() {
 	assert sender.sent_raw.len == count
 
 	mut receiver := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(16, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(16, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 
 	// deliver all except indices 2, 5, 8
@@ -79,11 +78,10 @@ fn test_ack_loss_triggers_full_resend() {
 	assert sender.sent_raw.len == 4
 
 	mut receiver := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 	for raw in sender.sent_raw {
 		receiver.receive(raw)!
@@ -114,11 +112,10 @@ fn test_split_nack_recovery_delivers_full_payload() {
 	assert sender.sent_raw.len == 3
 
 	mut receiver := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(4, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 
 	receiver.receive(sender.sent_raw[0])!
@@ -155,8 +152,7 @@ fn test_split_nack_recovery_delivers_full_payload() {
 // index 0 arrives, then flush all 5 in correct order.
 fn test_ordered_delivery_reversed_arrival() {
 	mut conn := &Conn{
-		packets:      new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
-		packet_queue: new_packet_queue()
+		packets: new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
 	}
 	n := 5
 	for i := n - 1; i >= 0; i-- {
@@ -185,11 +181,10 @@ fn test_ordered_delivery_reversed_arrival() {
 // The same datagram delivered 10 times must result in exactly one packet.
 fn test_duplicate_storm_single_delivery() {
 	mut conn := &Conn{
-		mtu:          max_mtu_size
-		packets:      new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
-		win:          new_datagram_window()
-		packet_queue: new_packet_queue()
-		resend:       new_resend_map()
+		mtu:     max_mtu_size
+		packets: new_packet_chan(8, packet_chan_max_cap, packet_chan_max_bytes)
+		win:     new_datagram_window()
+		resend:  new_resend_map()
 	}
 	mut dg := []u8{}
 	dg << (bit_flag_datagram | bit_flag_needs_b_and_as)

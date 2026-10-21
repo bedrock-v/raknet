@@ -11,22 +11,25 @@ const resend_max_delay = 2 * time.second
 @[heap]
 pub struct Conn {
 mut:
-	udp                 &net.UdpConn = unsafe { nil }
-	remote              net.Addr
-	remote_key          string
-	mtu                 u16
-	seq                 Uint24
-	message_idx         Uint24
-	sequence_idx        Uint24
-	order_idx           Uint24
-	split_id            u32
-	packets             PacketChan = new_packet_chan(packet_chan_initial_cap, packet_chan_max_cap,
+	udp             &net.UdpConn = unsafe { nil }
+	remote          net.Addr
+	remote_key      string
+	mtu             u16
+	seq             Uint24
+	message_idx     Uint24
+	sequence_idx    Uint24
+	order_idx       Uint24
+	split_id        u32
+	packets         PacketChan = new_packet_chan(packet_chan_initial_cap, packet_chan_max_cap,
 		packet_chan_max_bytes)
-	connected           chan bool
-	splits              map[u16][][]u8
-	resend              ResendMap
-	win                 DatagramWindow
-	packet_queue        PacketQueue
+	connected       chan bool
+	splits          map[u16][][]u8
+	resend          ResendMap
+	win             DatagramWindow
+	reliable_window ReliableWindow
+	// Explicit initialization is needed for nested maps in constant-sized arrays on V 22b2369.
+	packet_queues       [ordering_channels]PacketQueue = [ordering_channels]PacketQueue{init: PacketQueue{}}
+	queued_packet_bytes int
 	pending_ack         []Uint24
 	pending_nack        []Uint24
 	sent_raw            [][]u8
@@ -62,7 +65,6 @@ fn new_conn(mut udp net.UdpConn, remote net.Addr, mtu u16, is_server bool, liste
 		splits:             map[u16][][]u8{}
 		resend:             new_resend_map()
 		win:                new_datagram_window()
-		packet_queue:       new_packet_queue()
 		pending_ack:        []Uint24{}
 		pending_nack:       []Uint24{}
 		sent_raw:           [][]u8{}
@@ -208,8 +210,14 @@ fn (mut c Conn) write_with_reliability_internal(data []u8, reliability Reliabili
 		c.mutex.unlock()
 	}
 	fragments := split_packet_content(data, c.effective_mtu())
-	order_index := if reliability.sequenced_or_ordered() { c.order_idx.inc() } else { Uint24(0) }
-	sequence_index := if reliability.sequenced() { c.sequence_idx.inc() } else { Uint24(0) }
+	order_index := if reliability.sequenced_or_ordered() { c.order_idx } else { Uint24(0) }
+	sequence_index := if reliability.sequenced() { c.sequence_idx } else { Uint24(0) }
+	if reliability == .reliable_ordered {
+		c.order_idx = uint24_next(c.order_idx)
+		c.sequence_idx = 0
+	} else if reliability.sequenced() {
+		c.sequence_idx = uint24_next(c.sequence_idx)
+	}
 	split_id := u16(c.split_id)
 	if fragments.len > 1 {
 		c.split_id++
@@ -634,6 +642,15 @@ fn (mut c Conn) receive(data []u8) ! {
 		mut pk := Packet{}
 		n := pk.read(data[offset..])!
 		offset += n
+		if pk.reliability.reliable() {
+			fresh := c.reliable_window.add(pk.message_index) or {
+				c.close_immediately()
+				return err
+			}
+			if !fresh {
+				continue
+			}
+		}
 		if pk.split {
 			c.receive_split_packet(pk)!
 		} else {
@@ -842,19 +859,27 @@ fn (mut c Conn) receive_split_packet(pk Packet) ! {
 }
 
 fn (mut c Conn) receive_packet(pk Packet) ! {
-	if pk.reliability != .reliable_ordered {
+	if !pk.reliability.sequenced_or_ordered() {
 		c.handle_packet(pk.content, pk.reliability)!
 		return
 	}
-	if !c.packet_queue.put(pk.order_index, pk.content) {
+	channel := int(pk.order_channel)
+	previous_bytes := c.packet_queues[channel].queued_bytes
+	fresh := c.packet_queues[channel].put(pk) or {
+		c.close_immediately()
+		return err
+	}
+	if !fresh {
 		return
 	}
-	if c.packet_queue.window_size() > Uint24(max_window_size) {
+	packets := c.packet_queues[channel].fetch()
+	c.queued_packet_bytes += c.packet_queues[channel].queued_bytes - previous_bytes
+	if c.queued_packet_bytes > packet_queue_max_bytes {
 		c.close_immediately()
-		return error('packet queue window size is too big')
+		return error('maximum buffered ordered and sequenced bytes reached')
 	}
-	for content in c.packet_queue.fetch() {
-		c.handle_packet(content, pk.reliability)!
+	for packet in packets {
+		c.handle_packet(packet.content, packet.reliability)!
 	}
 }
 
