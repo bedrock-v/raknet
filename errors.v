@@ -29,6 +29,8 @@ pub const err_pong_data_too_large = error_with_code('pong data must be no longer
 const max_window_size = 2048
 const max_split_count = 512
 const max_concurrent_splits = 16
+
+const reliable_message_window_size = max_window_size + max_split_count * max_concurrent_splits
 const close_drain_timeout = time.second
 
 // background_read_poll_interval bounds how long a background reader loop

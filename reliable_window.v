@@ -11,7 +11,7 @@ fn (mut window ReliableWindow) add(index Uint24) !bool {
 	if distance >= uint24_half_range || index in window.received {
 		return false
 	}
-	if distance >= u32(max_window_size) {
+	if distance >= u32(reliable_message_window_size) {
 		return error('reliable message window size is too big')
 	}
 	window.received[index] = true
